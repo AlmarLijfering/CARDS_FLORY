@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block title %}
+Overview
+{% endblock title %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <embed id="select-cards" src="/select_card" width="100%" height="1400">
+            <!-- Example button to trigger refresh -->
+            <button id="refresh-button" class="btn btn-primary mt-2">Refresh Overview</button>
+        </div>
+        <div class="col-md-8">
+            <embed id="overview-cards" src="/overview_cards" width="100%" height="1400">
+        </div>
+    </div>
+</div>
+<script>
+    function refreshOverviewCards() {
+        const overviewCards = document.getElementById('overview-cards');
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', '/overview_cards', true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                const newEmbed = document.createElement('embed');
+                newEmbed.src = '/overview_cards';
+                newEmbed.width = '100%';
+                newEmbed.height = '1400';
+                newEmbed.id = 'overview-cards';
+                overviewCards.parentNode.replaceChild(newEmbed, overviewCards);
+            }
+        };
+        xhr.send();
+    }
+
+    // Refresh the overview cards every 60 seconds (optional)
+    setInterval(refreshOverviewCards, 60000);
+
+    // Add event listener to the refresh button
+    document.getElementById('refresh-button').addEventListener('click', function () {
+        refreshOverviewCards();
+    });
+</script>
+{% endblock content %}

@@ -1,0 +1,170 @@
+/* Sticky Box for floating items */
+.sticky-top-custom {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background-color: white;
+}
+
+/* Container styling for the overall layout */
+.container {
+    border: 1px solid #ccc;
+    padding: 5px;
+    /* Reduced padding */
+    min-height: 350px;
+    text-align: center;
+}
+
+/* Styling for the container holding available images */
+#left-container {
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    padding: 10px;
+    /* Reduced padding */
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+/* Styling for the draggable cards */
+.card {
+    cursor: pointer;
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.2s;
+    margin: 5px;
+    /* Reduced margin */
+}
+
+.card img.small {
+    width: 240px;
+    height: 344px;
+    object-fit: cover;
+}
+
+/* Hover effect for cards */
+.card:hover {
+    transform: scale(1.05);
+}
+
+/* Styling for images inside the cards */
+.card img.large {
+    width: 480px;
+    height: 688px;
+    object-fit: cover;
+}
+
+/* Styling for the drop zones */
+.dropzone {
+    border: 2px dashed #ccc;
+    width: 482px;
+    /* 480px width + 2px border */
+    height: 690px;
+    /* 688px height + 2px border */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 50px;
+    font-weight: bold;
+    color: #aaa;
+    margin: 5px;
+    /* Reduced margin */
+    box-sizing: border-box;
+    background-color: #f8f8f8;
+}
+
+/* Placeholder text for empty drop zones */
+.dropzone.empty::before {
+    content: attr(data-zone);
+}
+
+/* Styling for images inside the dropzones */
+.dropzone img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Styling for the remove button */
+.remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* Styling for placeholders in the available images section */
+.placeholder {
+    height: 344px;
+    width: 240px;
+    border: 1px dashed #ccc;
+    margin: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    background-color: #f8f8f8;
+}
+
+.placeholder.empty {
+    background: #f8f8f8;
+}
+
+/* Wrapper for the available cards, allowing for scrolling */
+.card-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    /* Reduced gap */
+    justify-content: center;
+}
+
+/* Wrapper for the dropzones */
+.dropzone-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 0;
+    /* Remove any extra margins */
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+}
+
+/* Styling for the heading */
+h5 {
+    font-weight: bold;
+    margin-bottom: 10px;
+    /* Reduced margin */
+    color: #333;
+}
+
+/* Button styling */
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Floating right part */
+.floating-right {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    max-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+}

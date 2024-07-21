@@ -1,0 +1,319 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Drag and Drop Image Gallery
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Container styling for the overall layout */
+    .container {
+        border: 1px solid #ccc;
+        /* Border around the container */
+        padding: 10px;
+        /* Padding inside the container */
+        min-height: 350px;
+        /* Minimum height */
+        text-align: center;
+        /* Center-align text */
+    }
+
+    /* Styling for the container holding available images */
+    #left-container {
+        background-color: #f9f9f9;
+        /* Light background color */
+        border-radius: 10px;
+        /* Rounded corners */
+        padding: 20px;
+        /* Padding inside the container */
+    }
+
+    /* Styling for the draggable cards */
+    .card {
+        cursor: pointer;
+        /* Cursor changes to pointer on hover */
+        position: relative;
+        /* Ensure positioning context for the remove button */
+        border: 1px solid #ccc;
+        /* Border around each card */
+        border-radius: 10px;
+        /* Rounded corners */
+        overflow: hidden;
+        /* Hide overflow content */
+        transition: transform 0.2s;
+        /* Smooth transform transition */
+    }
+
+    /* Hover effect for cards */
+    .card:hover {
+        transform: scale(1.05);
+        /* Slightly enlarge card on hover */
+    }
+
+    /* Styling for images inside the cards */
+    .card img.small {
+        width: 240px;
+        /* Width of the small card image */
+        height: 344px;
+        /* Height of the small card image */
+        object-fit: cover;
+        /* Cover the entire area */
+    }
+
+    .card img.large {
+        width: 480px;
+        /* Width of the large card image */
+        height: 688px;
+        /* Height of the large card image */
+        object-fit: cover;
+        /* Cover the entire area */
+    }
+
+    /* Styling for the drop zones */
+    .dropzone {
+        border: 2px dashed #ccc;
+        /* Dashed border */
+        padding: 10px;
+        /* Padding inside the dropzone */
+        width: 480px;
+        /* Fixed width */
+        height: 688px;
+        /* Fixed height */
+        display: flex;
+        /* Flexbox for centering content */
+        justify-content: center;
+        /* Center content horizontally */
+        align-items: center;
+        /* Center content vertically */
+        font-size: 50px;
+        /* Large font size for zone number */
+        font-weight: bold;
+        /* Bold font */
+        color: #aaa;
+        /* Light text color */
+        margin: 10px;
+        /* Margin around each dropzone */
+        box-sizing: border-box;
+        /* Include padding and border in the element's total width and height */
+        background-color: #f8f8f8;
+        /* Background color for dropzone */
+    }
+
+    /* Placeholder text for empty drop zones */
+    .dropzone.empty::before {
+        content: attr(data-zone);
+        /* Display the zone number */
+    }
+
+    /* Styling for images inside the dropzones */
+    .dropzone img {
+        max-width: 100%;
+        /* Max width is 100% of the dropzone */
+        max-height: 100%;
+        /* Max height is 100% of the dropzone */
+        object-fit: contain;
+        /* Contain within the dropzone */
+    }
+
+    /* Styling for the remove button */
+    .remove-btn {
+        position: absolute;
+        /* Absolute positioning */
+        top: 5px;
+        /* 5px from the top */
+        right: 5px;
+        /* 5px from the right */
+        background: red;
+        /* Red background */
+        color: white;
+        /* White text color */
+        border: none;
+        /* No border */
+        border-radius: 50%;
+        /* Circular button */
+        width: 25px;
+        /* Fixed width */
+        height: 25px;
+        /* Fixed height */
+        display: flex;
+        /* Flexbox for centering content */
+        justify-content: center;
+        /* Center content horizontally */
+        align-items: center;
+        /* Center content vertically */
+        cursor: pointer;
+        /* Cursor changes to pointer on hover */
+        font-size: 16px;
+        /* Font size */
+    }
+
+    /* Styling for placeholders in the available images section */
+    .placeholder {
+        height: 344px;
+        /* Match card height */
+        width: 240px;
+        /* Match card width */
+        border: 1px dashed #ccc;
+        /* Dashed border */
+        margin: 5px;
+        /* Margin around each placeholder */
+        display: flex;
+        /* Flexbox for centering content */
+        justify-content: center;
+        /* Center content horizontally */
+        align-items: center;
+        /* Center content vertically */
+        flex-shrink: 0;
+        /* Prevent shrinking */
+        background-color: #f8f8f8;
+        /* Background color */
+    }
+
+    .placeholder.empty {
+        background: #f8f8f8;
+        /* Background color when empty */
+    }
+
+    /* Wrapper for the available cards, allowing for scrolling */
+    .card-wrapper {
+        display: flex;
+        /* Flexbox for layout */
+        flex-wrap: wrap;
+        /* Wrap flex items */
+        gap: 10px;
+        /* Gap between items */
+        justify-content: center;
+        /* Center items */
+        max-height: 80vh;
+        /* Max height */
+        overflow-y: auto;
+        /* Vertical scrolling */
+    }
+
+    /* Wrapper for the dropzones */
+    .dropzone-wrapper {
+        display: flex;
+        /* Flexbox for layout */
+        flex-wrap: wrap;
+        /* Wrap flex items */
+        justify-content: center;
+        /* Center items */
+    }
+
+    /* Styling for the heading */
+    h5 {
+        font-weight: bold;
+        /* Bold font */
+        margin-bottom: 20px;
+        /* Space below heading */
+        color: #333;
+        /* Dark text color */
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-3">
+            <div id="left-container" class="container">
+                <h5>Available Images</h5>
+                <div class="card-wrapper">
+                    {% for image in images %}
+                    <div id="slot-{{ image.id }}" class="placeholder empty">
+                        <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
+                            data-large="{{ url_for('static', filename=image.large) }}">
+                            <img src="{{ url_for('static', filename=image.small) }}" class="small"
+                                alt="Image {{ image.id }}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-9">
+            <div class="dropzone-wrapper">
+                <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
+                <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
+                <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
+                <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
+                <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
+                <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let draggedElement = null;
+
+    document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            draggedElement = e.target.closest('.card');
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => {
+                draggedElement.style.display = 'none';
+                let parent = draggedElement.closest('.placeholder');
+                if (parent) {
+                    parent.classList.add('empty');
+                }
+            }, 0);
+        });
+
+        card.addEventListener('dragend', (e) => {
+            if (draggedElement) {
+                draggedElement.style.display = 'block';
+                let parent = draggedElement.closest('.placeholder');
+                if (parent) {
+                    parent.classList.remove('empty');
+                }
+            }
+        });
+    });
+
+    document.querySelectorAll('.dropzone').forEach(dropzone => {
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (dropzone.classList.contains('empty') && draggedElement) {
+                dropzone.classList.remove('empty');
+                dropzone.appendChild(createCard(draggedElement, dropzone));
+                let parent = draggedElement.closest('.placeholder');
+                if (parent) {
+                    parent.classList.add('empty');
+                }
+                draggedElement = null;
+            }
+        });
+    });
+
+    function createCard(element, dropzone) {
+        let card = document.createElement('div');
+        card.className = 'card';
+        card.draggable = true;
+        card.dataset.id = element.dataset.id;
+
+        let img = document.createElement('img');
+        img.src = element.dataset.large;
+        img.classList.add('large');
+        card.appendChild(img);
+
+        let btn = document.createElement('button');
+        btn.className = 'remove-btn';
+        btn.innerHTML = '&times;';
+        btn.onclick = () => {
+            let slot = document.getElementById('slot-' + element.dataset.id);
+            slot.classList.remove('empty');
+            slot.appendChild(element);
+            element.style.display = 'block';
+            dropzone.classList.add('empty');
+            card.remove();
+        };
+        card.appendChild(btn);
+
+        return card;
+    }
+</script>
+{% endblock %}

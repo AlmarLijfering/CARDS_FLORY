@@ -1,0 +1,160 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Drag and Drop Image Gallery
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-3" style="position: sticky; top: 0;">
+            <div id="left-container" class="container">
+                <h5>Available Images</h5>
+                <div class="card-wrapper">
+                    {% for image in images %}
+                    <div id="slot-{{ image.id }}" class="placeholder empty">
+                        <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
+                            data-large="{{ url_for('static', filename=image.large) }}">
+                            <img src="{{ url_for('static', filename=image.small) }}" class="small"
+                                alt="Image {{ image.id }}">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-9 floating-right">
+            <div class="row mb-3">
+                <div class="col-12 text-center">
+                    <button id="finalize-btn" class="btn btn-primary" disabled>Finalize Selection</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 dropzone-wrapper">
+                    <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
+                    <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
+                    <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
+                    <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
+                    <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
+                    <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let draggedElement = null;
+    let selectedCardsCount = 0;
+    const maxCards = 6;
+    const finalizeBtn = document.getElementById('finalize-btn');
+
+    document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            draggedElement = e.target.closest('.card');
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => {
+                draggedElement.style.display = 'none';
+                let parent = draggedElement.closest('.placeholder');
+                if (parent) {
+                    parent.classList.add('empty');
+                }
+            }, 0);
+        });
+
+        card.addEventListener('dragend', (e) => {
+            if (draggedElement) {
+                draggedElement.style.display = 'block';
+                let parent = draggedElement.closest('.placeholder');
+                if (parent) {
+                    parent.classList.remove('empty');
+                }
+            }
+        });
+    });
+
+    document.querySelectorAll('.dropzone').forEach(dropzone => {
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (dropzone.classList.contains('empty') && draggedElement && selectedCardsCount < maxCards) {
+                dropzone.classList.remove('empty');
+                dropzone.appendChild(createCard(draggedElement, dropzone));
+                let parent = draggedElement.closest('.placeholder');
+                if (parent) {
+                    parent.classList.add('empty');
+                }
+                draggedElement = null;
+                selectedCardsCount++;
+                updateFinalizeButton();
+            }
+        });
+    });
+
+    function createCard(element, dropzone) {
+        let card = document.createElement('div');
+        card.className = 'card';
+        card.draggable = true;
+        card.dataset.id = element.dataset.id;
+
+        let img = document.createElement('img');
+        img.src = element.dataset.large;
+        img.classList.add('large');
+        card.appendChild(img);
+
+        let btn = document.createElement('button');
+        btn.className = 'remove-btn';
+        btn.innerHTML = '&times;';
+        btn.onclick = () => {
+            let slot = document.getElementById('slot-' + element.dataset.id);
+            slot.classList.remove('empty');
+            slot.appendChild(element);
+            element.style.display = 'block';
+            dropzone.classList.add('empty');
+            card.remove();
+            selectedCardsCount--;
+            updateFinalizeButton();
+        };
+        card.appendChild(btn);
+
+        return card;
+    }
+
+    function updateFinalizeButton() {
+        if (selectedCardsCount > 0) {
+            finalizeBtn.removeAttribute('disabled');
+        } else {
+            finalizeBtn.setAttribute('disabled', true);
+        }
+    }
+
+    finalizeBtn.addEventListener('click', () => {
+        const selectedCards = [];
+        document.querySelectorAll('.dropzone').forEach(dropzone => {
+            if (!dropzone.classList.contains('empty')) {
+                const card = dropzone.querySelector('.card');
+                if (card) {
+                    selectedCards.push(card.dataset.id);
+                }
+            }
+        });
+        fetch('/finalize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ selectedCards }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = '/overview_cards';
+                }
+            });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Selected Cards
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-3">
+        <div class="col-12 text-center">
+            <h5>Selected Cards</h5>
+            <button id="back-btn" class="btn btn-secondary">New Selection</button>
+            <button id="print-btn" class="btn btn-primary">Print to PDF</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="card-wrapper" id="card-container">
+                {% for image in images %}
+                <div class="card">
+                    <img src="{{ url_for('static', filename=image.large) }}" class="large"
+                        alt="Selected Image {{ image.id }}">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script>
+    document.getElementById('back-btn').addEventListener('click', function () {
+        window.location.href = '/';
+    });
+
+    document.getElementById('print-btn').addEventListener('click', function () {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const cards = document.querySelectorAll('#card-container .card img');
+
+        cards.forEach((img, index) => {
+            if (index > 0) {
+                doc.addPage();
+            }
+            doc.addImage(img.src, 'JPEG', 15, 40, 180, 256); // Adjust the dimensions as needed
+        });
+
+        doc.save('selected_cards.pdf');
+    });
+</script>
+{% endblock %}
