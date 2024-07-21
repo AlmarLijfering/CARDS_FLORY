@@ -1,59 +1,38 @@
-from flask import Flask, render_template, request
-from flask_wtf.csrf import CSRFProtect
-from wtforms import BooleanField, SubmitField, FieldList, FormField
-from wtforms.validators import InputRequired
-import cards  # assuming cards.py is in the same directory
+from flask import Flask, render_template, request, jsonify
+from waitress import serve
+
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # needed for WTForms
-csrf = CSRFProtect(app)
 
-def print_form_data(form):
-    """Helper function to print form data."""
-    for field in form:
-        if isinstance(field, FieldList):
-            for subfield in field:
-                print(f"{subfield.name}: {subfield.selected.data}")
-        else:
-            print(f"{field.name}: {field.data}")
+selected_cards = []
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def index():
-    form = cards.EmotionForm()
-    all_emotions = cards.emotions.copy()  # Initialize copy to pass to the template
+    images = [
+        {"id": i, "small": f"Images/cards/cards_s{i:03d}.jpg", "large": f"Images/cards/cards_l{i:03d}.jpg"}
+        for i in range(1, 109)
+    ]
+    return render_template('select_cards.html', images=images)
 
-    if request.method == 'GET':
-        print("GET")
-        # Populate the FieldList with entries for each emotion
-        for i, emotion in enumerate(cards.emotions):
-            form.emotions.append_entry()
-        # Correct the names after appending
-        for i, field in enumerate(form.emotions):
-            field.selected.name = f'emotions-{i}-selected'
-        print_form_data(form)
+@app.route('/log', methods=['POST'])
+def log():
+    message = request.json.get('message')
+    app.logger.debug(message)
+    return jsonify(status='success')
 
-    elif request.method == 'POST':
-        print("POST")
-        form = cards.EmotionForm(request.form)
-        print_form_data(form)
-        # Ensure the FieldList has the same number of entries as the emotions list
-        while len(form.emotions) < len(cards.emotions):
-            form.emotions.append_entry()
-        # Correct the names after appending
-        for i, field in enumerate(form.emotions):
-            field.selected.name = f'emotions-{i}-selected'
+@app.route('/finalize', methods=['POST'])
+def finalize():
+    global selected_cards
+    selected_cards = request.json.get('selectedCards', [])
+    return jsonify(status='success')
 
-        if form.validate_on_submit():
-            # Update the selected state of each emotion based on form submission
-            for i, emotion in enumerate(cards.emotions):
-                all_emotions[i]['selected'] = form.emotions[i].selected.data
-        else:
-            print("Form validation failed")
-            print(form.errors)
-
-        print_form_data(form)
-
-    return render_template('index.html', form=form, emotions=all_emotions)
+@app.route('/overview_cards')
+def overview_cards():
+    images = [
+        {"id": i, "large": f"Images/cards/cards_l{i:03d}.jpg"}
+        for i in map(int, selected_cards)
+    ]
+    return render_template('overview_cards.html', images=images)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    serve(app, host="0.0.0.0", port=8000)
