@@ -4,26 +4,28 @@
     position: sticky;
     top: 0;
     z-index: 1020;
-    background-color: white;
+    background-color: lightgray;
 }
 
 /* Container styling for the overall layout */
 .container {
-    border: 1px solid #ccc;
-    padding: 5px;
+    border: 1px solid lightgray;
+    padding: 1px;
     /* Reduced padding */
     min-height: 350px;
     text-align: center;
+    box-sizing: border-box;
 }
 
 /* Styling for the container holding available images */
 #left-container {
-    background-color: #f9f9f9;
-    border-radius: 10px;
-    padding: 10px;
+    background-color: lightgray;
+    border-radius: 3px;
+    padding: 1px;
     /* Reduced padding */
     overflow-y: auto;
     max-height: 100vh;
+    box-sizing: border-box;
 }
 
 /* Styling for the draggable cards */
@@ -31,17 +33,20 @@
     cursor: pointer;
     position: relative;
     border: 1px solid #ccc;
-    border-radius: 10px;
+    border-radius: 7px;
     overflow: hidden;
-    transition: transform 0.2s;
-    margin: 5px;
+    transition: transform 0.9s;
+    margin: 3px;
     /* Reduced margin */
+    box-sizing: border-box;
+    opacity: 1;
 }
 
 .card img.small {
-    width: 120px;
-    height: 172px;
+    width: calc(120px - 3px); /* Adjusted to fit within border */
+    height: calc(172px - 10px); /* Adjusted to fit within border */
     object-fit: cover;
+    opacity: 1;
 }
 
 /* Hover effect for cards */
@@ -51,18 +56,16 @@
 
 /* Styling for images inside the cards */
 .card img.large {
-    width: 240px;
-    height: 344px;
+    width: calc(240px - 3px); /* Adjusted to fit within border */
+    height: calc(344px - 20px); /* Adjusted to fit within border */
     object-fit: cover;
 }
 
 /* Styling for the drop zones */
 .dropzone {
     border: 1px dashed #ccc;
-    width: 242px;
-    /* 240px width + 2px border */
-    height: 346px;
-    /* 344px height + 2px border */
+    width: calc(240px - 3px); /* Adjusted to fit within border */
+    height: calc(344px - 10px); /* Adjusted to fit within border */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -72,7 +75,7 @@
     margin: 5px;
     /* Reduced margin */
     box-sizing: border-box;
-    background-color: #f8f8f8;
+    background-color: #e8e8e8;
 }
 
 /* Placeholder text for empty drop zones */
@@ -107,8 +110,8 @@
 
 /* Styling for placeholders in the available images section */
 .placeholder {
-    height: 172px;
-    width: 120px;
+    height: calc(172px - 3px); /* Adjusted to fit within border */
+    width: calc(120px - 10px); /* Adjusted to fit within border */
     border: 1px dashed #ccc;
     margin: 5px;
     display: flex;
@@ -126,7 +129,7 @@
 .card-wrapper {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 1px;
     /* Reduced gap */
     justify-content: center;
 }
@@ -161,8 +164,8 @@ h5 {
     position: sticky;
     top: 0;
     background-color: white;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 1px;
+    border-radius: 7px;
     max-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;

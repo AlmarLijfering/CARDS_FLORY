@@ -7,7 +7,7 @@ Drag and Drop Image Gallery
 {% block content %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-8" style="position: sticky; top: 0;">
+        <div class="col-7" style="position: sticky; top: 0;">
             <div id="left-container" class="container">
                 <h5>Available Images</h5>
                 <div class="card-wrapper">
@@ -23,7 +23,7 @@ Drag and Drop Image Gallery
                 </div>
             </div>
         </div>
-        <div class="col-4 floating-right">
+        <div class="col-5 floating-right">
             <div class="row mb-3">
                 <div class="col-12 text-center">
                     <button id="finalize-btn" class="btn btn-primary" disabled>Finalize Selection</button>
@@ -50,28 +50,30 @@ Drag and Drop Image Gallery
     const finalizeBtn = document.getElementById('finalize-btn');
 
     document.querySelectorAll('.card').forEach(card => {
-        card.addEventListener('dragstart', (e) => {
-            draggedElement = e.target.closest('.card');
-            e.dataTransfer.effectAllowed = 'move';
-            setTimeout(() => {
-                draggedElement.style.display = 'none';
-                let parent = draggedElement.closest('.placeholder');
-                if (parent) {
-                    parent.classList.add('empty');
-                }
-            }, 0);
-        });
-
-        card.addEventListener('dragend', (e) => {
-            if (draggedElement) {
-                draggedElement.style.display = 'block';
-                let parent = draggedElement.closest('.placeholder');
-                if (parent) {
-                    parent.classList.remove('empty');
-                }
+    card.addEventListener('dragstart', (e) => {
+        draggedElement = e.target.closest('.card');
+        e.dataTransfer.effectAllowed = 'move';
+        draggedElement.classList.add('dragging');
+        setTimeout(() => {
+            draggedElement.style.display = 'none';
+            let parent = draggedElement.closest('.placeholder');
+            if (parent) {
+                parent.classList.add('empty');
             }
-        });
+        }, 0);
     });
+
+    card.addEventListener('dragend', (e) => {
+        if (draggedElement) {
+            draggedElement.style.display = 'block';
+            draggedElement.classList.remove('dragging');
+            let parent = draggedElement.closest('.placeholder');
+            if (parent) {
+                parent.classList.remove('empty');
+            }
+        }
+    });
+});
 
     document.querySelectorAll('.dropzone').forEach(dropzone => {
         dropzone.addEventListener('dragover', (e) => {
