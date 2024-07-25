@@ -39,8 +39,8 @@
 }
 
 .card img.small {
-    width: 240px;
-    height: 344px;
+    width: 120px;
+    height: 172px;
     object-fit: cover;
 }
 
@@ -51,18 +51,18 @@
 
 /* Styling for images inside the cards */
 .card img.large {
-    width: 480px;
-    height: 688px;
+    width: 240px;
+    height: 344px;
     object-fit: cover;
 }
 
 /* Styling for the drop zones */
 .dropzone {
-    border: 2px dashed #ccc;
-    width: 482px;
-    /* 480px width + 2px border */
-    height: 690px;
-    /* 688px height + 2px border */
+    border: 1px dashed #ccc;
+    width: 242px;
+    /* 240px width + 2px border */
+    height: 346px;
+    /* 344px height + 2px border */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -107,8 +107,8 @@
 
 /* Styling for placeholders in the available images section */
 .placeholder {
-    height: 344px;
-    width: 240px;
+    height: 172px;
+    width: 120px;
     border: 1px dashed #ccc;
     margin: 5px;
     display: flex;

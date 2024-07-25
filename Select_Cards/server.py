@@ -15,12 +15,12 @@ selected_cards = []
 
 @app.route('/')
 def index():
-    for root, dirs, files in os.walk(os.getcwd()):
-        logging.debug(f"Directory: {root}")
-        for dir in dirs:
-            logging.debug(f"Sub-directory: {dir}")
-        for file in files:
-            logging.debug(f"File: {file}")
+#    for root, dirs, files in os.walk(os.getcwd()):
+#        logging.debug(f"Directory: {root}")
+#        for dir in dirs:
+#            logging.debug(f"Sub-directory: {dir}")
+#        for file in files:
+#            logging.debug(f"File: {file}")
 
     images = [
         {"id": i, "small": f"Images/cards/cards_s{i:03d}.jpg", "large": f"Images/cards/cards_l{i:03d}.jpg"}
