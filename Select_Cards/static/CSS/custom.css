@@ -171,3 +171,11 @@ h5 {
     overflow-y: auto;
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
+
+/* No hover effect for the overview cards */
+.no-hover .card:hover {
+    transform: none; /* Disable scaling on hover */
+    border: 1px solid #ccc; /* Maintain the same border width */
+    z-index: auto; /* Reset z-index */
+    opacity: 1; /* Keep full opacity */
+}

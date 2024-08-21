@@ -1,14 +1,14 @@
 {% extends "layout.html" %}
 
 {% block title %}
-Selected Cards
+Overview Cards
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container no-hover"> <!-- Added 'no-hover' class here -->
     <div class="row mb-3">
         <div class="col-12 text-center">
-            <h5>Selected Cards</h5>
+            <h5>Overview of Selected Cards</h5> <!-- Adjusted the heading text -->
             <button id="back-btn" class="btn btn-secondary">New Selection</button>
             <button id="print-btn" class="btn btn-primary">Print to PDF</button>
         </div>
