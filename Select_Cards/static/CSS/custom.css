@@ -11,7 +11,6 @@
 .container {
     border: 1px solid lightgray;
     padding: 1px;
-    /* Reduced padding */
     min-height: 350px;
     text-align: center;
     box-sizing: border-box;
@@ -22,58 +21,70 @@
     background-color: lightgray;
     border-radius: 3px;
     padding: 1px;
-    /* Reduced padding */
     overflow-y: auto;
     max-height: 100vh;
     box-sizing: border-box;
+}
+
+/* Increase top padding for the left container to ensure space when cards zoom */
+#left-container {
+    padding-top: 30px; /* Adjust this value as needed */
+    padding-left: 30px; /* Adjust this value as needed */
+    padding-right: 30px; /* Adjust this value as needed */
+    padding-bottom: 30px; /* Adjust this value as needed */
 }
 
 /* Styling for the draggable cards */
 .card {
     cursor: pointer;
     position: relative;
-    border: 1px solid #ccc;
+    border: 1px solid #ccc; /* Reduced border width for default state */
     border-radius: 7px;
     overflow: hidden;
-    transition: transform 0.9s;
-    margin: 3px;
-    /* Reduced margin */
+    transition: transform 0.3s, z-index 0.3s, opacity 0.3s;
+    margin: 5px; /* Ensure equal margin on all sides */
     box-sizing: border-box;
     opacity: 1;
 }
 
 .card img.small {
-    width: calc(120px - 3px); /* Adjusted to fit within border */
-    height: calc(172px - 10px); /* Adjusted to fit within border */
+    width: 100%; /* Ensure the small image fits the card size */
+    height: 100%;
     object-fit: cover;
-    opacity: 1;
+}
+
+.card img.large {
+    width: 100%; /* Ensure the large image fits the card size */
+    height: 100%;
+    object-fit: cover;
 }
 
 /* Hover effect for cards */
 .card:hover {
-    transform: scale(1.05);
+    transform: scale(2.25);
+    border: 3px solid #ccc; /* Increase border width when hovered */
+    z-index: 1000; /* Ensure it appears on top */
+    opacity: 1; /* Ensure full opacity when hovered */
 }
 
-/* Styling for images inside the cards */
-.card img.large {
-    width: calc(240px - 3px); /* Adjusted to fit within border */
-    height: calc(344px - 20px); /* Adjusted to fit within border */
-    object-fit: cover;
+/* Disable zoom for cards in the dropzone */
+.dropzone .card:hover {
+    transform: none; /* Disable zoom */
+    z-index: auto; /* Reset z-index to default */
 }
 
 /* Styling for the drop zones */
 .dropzone {
-    border: 1px dashed #ccc;
-    width: calc(240px - 3px); /* Adjusted to fit within border */
-    height: calc(344px - 10px); /* Adjusted to fit within border */
+    border: 2px dashed #ccc; /* Consistent border width for dropzones */
+    width: 240px;  /* Fixed width for large dropzones */
+    height: 344px; /* Fixed height for large dropzones */
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 50px;
     font-weight: bold;
     color: #aaa;
-    margin: 5px;
-    /* Reduced margin */
+    margin: 5px; /* Ensure equal margin on all sides */
     box-sizing: border-box;
     background-color: #e8e8e8;
 }
@@ -81,13 +92,6 @@
 /* Placeholder text for empty drop zones */
 .dropzone.empty::before {
     content: attr(data-zone);
-}
-
-/* Styling for images inside the dropzones */
-.dropzone img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
 }
 
 /* Styling for the remove button */
@@ -110,15 +114,15 @@
 
 /* Styling for placeholders in the available images section */
 .placeholder {
-    height: calc(172px - 3px); /* Adjusted to fit within border */
-    width: calc(120px - 10px); /* Adjusted to fit within border */
-    border: 1px dashed #ccc;
-    margin: 5px;
+    width: 120px;  /* Match the width of the small card */
+    height: 172px; /* Match the height of the small card */
+    border: 1px dashed #ccc; /* Consistent border width with card */
+    margin: 5px; /* Ensure equal margin on all sides */
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-shrink: 0;
     background-color: #f8f8f8;
+    opacity: 1;
 }
 
 .placeholder.empty {
@@ -130,7 +134,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 1px;
-    /* Reduced gap */
     justify-content: center;
 }
 
@@ -140,22 +143,20 @@
     flex-wrap: wrap;
     justify-content: center;
     margin: 0;
-    /* Remove any extra margins */
-    overflow-x: hidden;
-    /* Prevent horizontal scroll */
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* Styling for the heading */
 h5 {
+    font-size: 2.5em; /* Increased font size for the heading */
     font-weight: bold;
-    margin-bottom: 10px;
-    /* Reduced margin */
+    margin-bottom: 20px; /* Increased bottom margin for more spacing */
     color: #333;
 }
 
 /* Button styling */
 .btn:disabled {
-    opacity: 0.65;
+    opacity: 0.75;
     cursor: not-allowed;
 }
 
@@ -168,6 +169,5 @@ h5 {
     border-radius: 7px;
     max-height: 100vh;
     overflow-y: auto;
-    overflow-x: hidden;
-    /* Prevent horizontal scroll */
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
