@@ -1,51 +1,156 @@
 {% extends "layout.html" %}
 
-{% block title %}
-Overview Cards
-{% endblock %}
+{% block title %}Overview Cards{% endblock %}
 
 {% block content %}
-<div class="container no-hover"> <!-- Added 'no-hover' class here -->
-    <div class="row mb-3">
-        <div class="col-12 text-center">
-            <h5>Overview of Selected Cards</h5> <!-- Adjusted the heading text -->
-            <button id="back-btn" class="btn btn-secondary">New Selection</button>
-            <button id="print-btn" class="btn btn-primary">Print to PDF</button>
-        </div>
+<div class="container no-hover">
+  <div class="row mb-3">
+    <div class="col-12 text-center">
+      <h5>Overview of Selected Cards</h5>
+      <button id="back-btn" class="btn btn-secondary">New Selection</button>
+      <button id="print-btn" class="btn btn-primary">Print to PDF</button>
     </div>
-    <div class="row">
-        <div class="col-12">
-            <div class="card-wrapper" id="card-container">
-                {% for image in images %}
-                <div class="card">
-                    <img src="{{ url_for('static', filename=image.large) }}" class="large"
-                        alt="Selected Image {{ image.id }}">
-                </div>
-                {% endfor %}
-            </div>
-        </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card-wrapper" id="card-container">
+        {% for image in images %}
+          <div class="card">
+            <img
+              src="{{ url_for('static', filename=image.large) }}"
+              class="large"
+              alt="Selected Image {{ image.id }}"
+              crossorigin="anonymous">
+          </div>
+        {% endfor %}
+      </div>
     </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
 <script>
-    document.getElementById('back-btn').addEventListener('click', function () {
-        window.location.href = '/';
+  document.getElementById('back-btn').addEventListener('click', () => {
+    window.location.href = '/';
+  });
+
+  // Load an image URL into an Image() object (not the DOM <img>) for consistent rendering
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const im = new Image();
+      im.crossOrigin = "anonymous";
+      im.onload = () => resolve(im);
+      im.onerror = reject;
+      im.src = url;
     });
+  }
 
-    document.getElementById('print-btn').addEventListener('click', function () {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const cards = document.querySelectorAll('#card-container .card img');
+  // Render image onto a square canvas without distortion.
+  // mode: "contain" (no crop, may add padding) or "cover" (fills square, may crop)
+  function imageToSquareDataURL(imageObj, sizePx = 1024, mode = "contain", background = "#FFFFFF") {
+    const canvas = document.createElement('canvas');
+    canvas.width = sizePx;
+    canvas.height = sizePx;
+    const ctx = canvas.getContext('2d');
 
-        cards.forEach((img, index) => {
-            if (index > 0) {
-                doc.addPage();
-            }
-            doc.addImage(img.src, 'JPEG', 15, 40, 180, 256); // Adjust the dimensions as needed
-        });
+    // Fill background (helps with transparent PNGs)
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, sizePx, sizePx);
 
-        doc.save('selected_cards.pdf');
-    });
+    const iw = imageObj.naturalWidth || imageObj.width;
+    const ih = imageObj.naturalHeight || imageObj.height;
+
+    // scale calculations
+    const scaleContain = Math.min(sizePx / iw, sizePx / ih);
+    const scaleCover   = Math.max(sizePx / iw, sizePx / ih);
+    const scale = (mode === "cover") ? scaleCover : scaleContain;
+
+    const dw = Math.round(iw * scale);
+    const dh = Math.round(ih * scale);
+    const dx = Math.round((sizePx - dw) / 2);
+    const dy = Math.round((sizePx - dh) / 2);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(imageObj, dx, dy, dw, dh);
+
+    return canvas.toDataURL("image/png");
+  }
+
+  document.getElementById('print-btn').addEventListener('click', async () => {
+    const { jsPDF } = window.jspdf;
+
+    // A4 portrait, mm
+    const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+
+    // Grab src URLs from the DOM images
+    const domImgs = Array.from(document.querySelectorAll('#card-container .card img'));
+    const srcs = domImgs.map(i => i.currentSrc || i.src).filter(Boolean);
+
+    if (srcs.length === 0) {
+      alert("No cards selected.");
+      return;
+    }
+
+    // --- Page/grid settings ---
+    const cols = 2;
+    const rows = 3;
+    const perPage = cols * rows;
+
+    const margin = 10; // mm
+    const gap = 6;     // mm
+    const top = 18;    // mm for title
+
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+
+    const cellW = (pageW - margin * 2 - gap * (cols - 1)) / cols;
+    const cellH = (pageH - top - margin - gap * (rows - 1)) / rows;
+    const sideMm = Math.min(cellW, cellH);
+
+    const drawHeader = (pageIndex) => {
+      doc.setFontSize(14);
+      doc.text("Overview of Selected Cards", margin, 12);
+      doc.setFontSize(10);
+      doc.text(`Page ${pageIndex}`, pageW - margin, 12, { align: "right" });
+    };
+
+    // Convert each image to a square PNG dataURL (no stretching)
+    // mode:
+    //  - "contain" keeps whole image (adds white padding if needed)
+    //  - "cover" fills the square (crops if needed)
+    const mode = "contain";
+    const squarePx = 1024; // matches your source, keeps quality
+    const bg = "#FFFFFF";
+
+    let pageIndex = 1;
+    drawHeader(pageIndex);
+
+    for (let i = 0; i < srcs.length; i++) {
+      if (i > 0 && i % perPage === 0) {
+        doc.addPage();
+        pageIndex += 1;
+        drawHeader(pageIndex);
+      }
+
+      const indexOnPage = i % perPage;
+      const r = Math.floor(indexOnPage / cols);
+      const c = indexOnPage % cols;
+
+      const x = margin + c * (sideMm + gap);
+      const y = top + r * (sideMm + gap);
+
+      // Load image, render to square, then add to PDF
+      const imgObj = await loadImage(srcs[i]);
+      const dataUrl = imageToSquareDataURL(imgObj, squarePx, mode, bg);
+
+      // Add the square image as a square in the PDF
+      doc.addImage(dataUrl, 'PNG', x, y, sideMm, sideMm);
+    }
+
+    doc.save('selected_cards.pdf');
+  });
 </script>
 {% endblock %}

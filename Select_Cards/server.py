@@ -23,8 +23,8 @@ def index():
 #            logging.debug(f"File: {file}")
 
     images = [
-        {"id": i, "small": f"Images/cards/cards_s{i:03d}.jpg", "large": f"Images/cards/cards_l{i:03d}.jpg"}
-        for i in range(1, 109)
+        {"id": i, "small": f"Images/cards/cards_s{i:03d}.png", "large": f"Images/cards/cards_l{i:03d}.png"}
+        for i in range(1, 103)
     ]
     return render_template('select_cards.html', images=images)
 
@@ -50,7 +50,7 @@ def finalize():
 @app.route('/overview_cards')
 def overview_cards():
     images = [
-        {"id": i, "large": f"Images/cards/cards_l{i:03d}.jpg"}
+        {"id": i, "large": f"Images/cards/cards_l{i:03d}.png"}
         for i in map(int, selected_cards)
     ]
     return render_template('overview_cards.html', images=images)

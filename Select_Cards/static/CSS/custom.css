@@ -11,7 +11,7 @@
 .container {
     border: 1px solid lightgray;
     padding: 1px;
-    min-height: 350px;
+    min-height: 256px;
     text-align: center;
     box-sizing: border-box;
 }
@@ -19,7 +19,7 @@
 /* Styling for the container holding available images */
 #left-container {
     background-color: lightgray;
-    border-radius: 3px;
+    border-radius: 5px;
     padding: 1px;
     overflow-y: auto;
     max-height: 100vh;
@@ -28,10 +28,10 @@
 
 /* Increase top padding for the left container to ensure space when cards zoom */
 #left-container {
-    padding-top: 30px; /* Adjust this value as needed */
-    padding-left: 30px; /* Adjust this value as needed */
-    padding-right: 30px; /* Adjust this value as needed */
-    padding-bottom: 30px; /* Adjust this value as needed */
+    padding-top: 5px; /* Adjust this value as needed */
+    padding-left: 5px; /* Adjust this value as needed */
+    padding-right: 5px; /* Adjust this value as needed */
+    padding-bottom: 5px; /* Adjust this value as needed */
 }
 
 /* Styling for the draggable cards */
@@ -61,7 +61,7 @@
 
 /* Hover effect for cards */
 .card:hover {
-    transform: scale(2.25);
+    transform: scale(1.75);
     border: 3px solid #ccc; /* Increase border width when hovered */
     z-index: 1000; /* Ensure it appears on top */
     opacity: 1; /* Ensure full opacity when hovered */
@@ -76,8 +76,8 @@
 /* Styling for the drop zones */
 .dropzone {
     border: 2px dashed #ccc; /* Consistent border width for dropzones */
-    width: 240px;  /* Fixed width for large dropzones */
-    height: 344px; /* Fixed height for large dropzones */
+    width: 256px;  /* Fixed width for large dropzones */
+    height: 256px; /* Fixed height for large dropzones */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -114,10 +114,10 @@
 
 /* Styling for placeholders in the available images section */
 .placeholder {
-    width: 120px;  /* Match the width of the small card */
-    height: 172px; /* Match the height of the small card */
+    width: 128px;  /* Match the width of the small card */
+    height: 128px; /* Match the height of the small card */
     border: 1px dashed #ccc; /* Consistent border width with card */
-    margin: 5px; /* Ensure equal margin on all sides */
+    margin: 3px; /* Ensure equal margin on all sides */
     display: flex;
     justify-content: center;
     align-items: center;
