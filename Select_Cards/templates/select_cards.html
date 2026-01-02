@@ -6,157 +6,249 @@ Drag and Drop Image Gallery
 
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-7" style="position: sticky; top: 0;">
-            <div id="left-container" class="container">
-                <h5>Available Images</h5>
-                <div class="card-wrapper">
-                    {% for image in images %}
-                    <div id="slot-{{ image.id }}" class="placeholder empty">
-                        <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
-                            data-large="{{ url_for('static', filename=image.large) }}">
-                            <img src="{{ url_for('static', filename=image.small) }}" class="small"
-                                alt="Image {{ image.id }}">
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+  <div class="row g-3">
+    <div class="col-12 col-lg-7">
+      <div id="left-container" class="container">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="mb-0">Available Images</h5>
+          <small class="text-muted d-lg-none mobile-hint">Tap a card to add it below</small>
         </div>
-        <div class="col-5 floating-right">
-            <div class="row mb-3">
-                <div class="col-12 text-center">
-                    <button id="finalize-btn" class="btn btn-primary" disabled>Finalize Selection</button>
-                </div>
+        <div class="card-wrapper">
+          {% for image in images %}
+          <div id="slot-{{ image.id }}" class="placeholder empty">
+            <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
+              data-large="{{ url_for('static', filename=image.large) }}">
+              <img src="{{ url_for('static', filename=image.small) }}" class="small" alt="Image {{ image.id }}">
             </div>
-            <div class="row">
-                <div class="col-12 dropzone-wrapper">
-                    <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
-                    <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
-                    <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
-                    <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
-                    <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
-                    <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
-                </div>
-            </div>
+          </div>
+          {% endfor %}
         </div>
+      </div>
     </div>
+    <div class="col-12 col-lg-5 floating-right">
+      <div class="row mb-3">
+        <div class="col-12 text-center">
+          <button id="finalize-btn" class="btn btn-primary finalize-btn" disabled>Finalize Selection</button>
+          <p class="text-muted small mt-2 d-lg-none">Slots accept up to 6 cards.</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-12 dropzone-wrapper">
+          <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
+          <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
+          <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
+          <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
+          <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
+          <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-    let draggedElement = null;
-    let selectedCardsCount = 0;
-    const maxCards = 6;
-    const finalizeBtn = document.getElementById('finalize-btn');
+  const maxCards = 6;
+  const finalizeBtn = document.getElementById('finalize-btn');
+  const dropzones = Array.from(document.querySelectorAll('.dropzone'));
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  let draggedElement = null;
+  let draggedFromPlaceholder = false;
+  let placementSucceeded = false;
+  let selectedCardsCount = 0;
 
-    document.querySelectorAll('.card').forEach(card => {
-        card.addEventListener('dragstart', (e) => {
-            draggedElement = e.target.closest('.card');
-            e.dataTransfer.effectAllowed = 'move';
-            draggedElement.classList.add('dragging');
-            setTimeout(() => {
-                draggedElement.style.display = 'none';
-                let parent = draggedElement.closest('.placeholder');
-                if (parent) {
-                    parent.classList.add('empty');
-                }
-            }, 0);
-        });
+  function getFirstEmptyDropzone() {
+    return dropzones.find(zone => zone.classList.contains('empty'));
+  }
 
-        card.addEventListener('dragend', (e) => {
-            if (draggedElement) {
-                draggedElement.style.display = 'block';
-                draggedElement.classList.remove('dragging');
-                let parent = draggedElement.closest('.placeholder');
-                if (parent) {
-                    parent.classList.remove('empty');
-                }
-            }
-        });
-    });
+  function updateFinalizeButton() {
+    if (selectedCardsCount > 0) {
+      finalizeBtn.removeAttribute('disabled');
+    } else {
+      finalizeBtn.setAttribute('disabled', true);
+    }
+  }
 
-    document.querySelectorAll('.dropzone').forEach(dropzone => {
-        dropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
+  function placeCardInDropzone(cardElement, dropzone) {
+    const originDropzone = cardElement.closest('.dropzone');
+    const movingExistingCard = Boolean(originDropzone);
 
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            if (dropzone.classList.contains('empty') && draggedElement && selectedCardsCount < maxCards) {
-                dropzone.classList.remove('empty');
-                dropzone.appendChild(createCard(draggedElement, dropzone));
-                let parent = draggedElement.closest('.placeholder');
-                if (parent) {
-                    parent.classList.add('empty');
-                }
-                draggedElement = null;
-                selectedCardsCount++;
-                updateFinalizeButton();
-            }
-        });
-    });
-
-    function createCard(element, dropzone) {
-        let card = document.createElement('div');
-        card.className = 'card';
-        card.draggable = true;
-        card.dataset.id = element.dataset.id;
-
-        let img = document.createElement('img');
-        img.src = element.dataset.large;
-        img.classList.add('large');
-        card.appendChild(img);
-
-        let btn = document.createElement('button');
-        btn.className = 'remove-btn';
-        btn.innerHTML = '&times;';
-        btn.onclick = () => {
-            let slot = document.getElementById('slot-' + element.dataset.id);
-            slot.classList.remove('empty');
-            slot.appendChild(element);
-            element.style.display = 'block';
-            dropzone.classList.add('empty');
-            card.remove();
-            selectedCardsCount--;
-            updateFinalizeButton();
-        };
-        card.appendChild(btn);
-
-        return card;
+    if (!dropzone || (!movingExistingCard && selectedCardsCount >= maxCards)) {
+      return false;
     }
 
-    function updateFinalizeButton() {
-        if (selectedCardsCount > 0) {
-            finalizeBtn.removeAttribute('disabled');
-        } else {
-            finalizeBtn.setAttribute('disabled', true);
+    if (originDropzone && originDropzone !== dropzone) {
+      originDropzone.classList.add('empty');
+      originDropzone.innerHTML = '';
+      selectedCardsCount = Math.max(selectedCardsCount - 1, 0);
+    }
+
+    if (!dropzone.classList.contains('empty')) {
+      if (originDropzone) {
+        originDropzone.appendChild(cardElement);
+        originDropzone.classList.remove('empty');
+        selectedCardsCount = Math.min(selectedCardsCount + 1, maxCards);
+        updateFinalizeButton();
+      }
+      return false;
+    }
+
+    dropzone.classList.remove('empty');
+    dropzone.appendChild(createCard(cardElement, dropzone));
+
+    const slot = document.getElementById(`slot-${cardElement.dataset.id}`);
+    if (slot) {
+      slot.classList.add('empty');
+      if (!movingExistingCard) {
+        cardElement.style.visibility = 'hidden';
+      }
+    }
+
+    selectedCardsCount++;
+    updateFinalizeButton();
+    return true;
+  }
+
+  function handleCardSelection(cardElement) {
+    const isCardAvailable = !!cardElement.closest('.placeholder');
+    if (!isCardAvailable) return;
+
+    const targetDropzone = getFirstEmptyDropzone();
+    if (targetDropzone && placeCardInDropzone(cardElement, targetDropzone)) {
+      placementSucceeded = true;
+    }
+  }
+
+  function createCard(element, dropzone) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.draggable = true;
+    card.dataset.id = element.dataset.id;
+
+    const img = document.createElement('img');
+    img.src = element.dataset.large;
+    img.classList.add('large');
+    card.appendChild(img);
+
+    const btn = document.createElement('button');
+    btn.className = 'remove-btn';
+    btn.innerHTML = '&times;';
+    btn.onclick = () => {
+      const slot = document.getElementById('slot-' + element.dataset.id);
+      if (slot) {
+        slot.classList.remove('empty');
+        slot.appendChild(element);
+        element.style.visibility = 'visible';
+      }
+      dropzone.classList.add('empty');
+      card.remove();
+      selectedCardsCount = Math.max(selectedCardsCount - 1, 0);
+      updateFinalizeButton();
+    };
+    card.appendChild(btn);
+
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+
+    return card;
+  }
+
+  function handleDragStart(e) {
+    draggedElement = e.target.closest('.card');
+    if (!draggedElement) return;
+
+    draggedFromPlaceholder = !!draggedElement.closest('.placeholder');
+    placementSucceeded = false;
+
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    draggedElement.classList.add('dragging');
+    setTimeout(() => {
+      draggedElement.style.visibility = 'hidden';
+      const parent = draggedElement.closest('.placeholder');
+      if (parent) {
+        parent.classList.add('empty');
+      }
+    }, 0);
+  }
+
+  function handleDragEnd() {
+    if (!draggedElement) return;
+
+    const shouldHide = draggedFromPlaceholder && placementSucceeded;
+    draggedElement.style.visibility = shouldHide ? 'hidden' : 'visible';
+    draggedElement.classList.remove('dragging');
+
+    const parent = draggedElement.closest('.placeholder');
+    if (parent) {
+      parent.classList.toggle('empty', shouldHide);
+    }
+
+    draggedElement = null;
+    draggedFromPlaceholder = false;
+    placementSucceeded = false;
+  }
+
+  document.querySelectorAll('#left-container .card').forEach(card => {
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+
+    if (isTouchDevice) {
+      card.addEventListener('click', () => handleCardSelection(card));
+    }
+  });
+
+  dropzones.forEach(dropzone => {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+      }
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (draggedElement) {
+        placementSucceeded = placeCardInDropzone(draggedElement, dropzone);
+        draggedElement = null;
+      }
+    });
+
+    if (isTouchDevice) {
+      dropzone.addEventListener('click', () => {
+        if (draggedElement) {
+          placementSucceeded = placeCardInDropzone(draggedElement, dropzone);
+          draggedElement = null;
         }
+      });
     }
+  });
 
-    finalizeBtn.addEventListener('click', () => {
-        const selectedCards = [];
-        document.querySelectorAll('.dropzone').forEach(dropzone => {
-            if (!dropzone.classList.contains('empty')) {
-                const card = dropzone.querySelector('.card');
-                if (card) {
-                    selectedCards.push(card.dataset.id);
-                }
-            }
-        });
-        fetch('/finalize', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ selectedCards }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    window.location.href = '/overview_cards';
-                }
-            });
+  finalizeBtn.addEventListener('click', () => {
+    const selectedCards = [];
+    dropzones.forEach(dropzone => {
+      if (!dropzone.classList.contains('empty')) {
+        const card = dropzone.querySelector('.card');
+        if (card) {
+          selectedCards.push(card.dataset.id);
+        }
+      }
     });
+
+    fetch('/finalize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ selectedCards }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          window.location.href = '/overview_cards';
+        }
+      });
+  });
 </script>
 {% endblock %}
