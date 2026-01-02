@@ -1,12 +1,3 @@
-/* Sticky Box for floating items */
-.sticky-top-custom {
-    position: -webkit-sticky;
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-    background-color: lightgray;
-}
-
 /* Container styling for the overall layout */
 .container {
     border: 1px solid lightgray;
@@ -178,4 +169,73 @@ h5 {
     border: 1px solid #ccc; /* Maintain the same border width */
     z-index: auto; /* Reset z-index */
     opacity: 1; /* Keep full opacity */
+}
+
+.finalize-btn {
+    width: 100%;
+}
+
+@media (min-width: 992px) {
+    .finalize-btn {
+        width: auto;
+        min-width: 200px;
+    }
+}
+
+/* Mobile optimizations */
+@media (max-width: 767.98px) {
+    .container {
+        border: none;
+        padding: 0.25rem;
+    }
+
+    #left-container {
+        max-height: none;
+        padding: 0.5rem;
+    }
+
+    .floating-right {
+        position: static;
+        max-height: none;
+        padding: 0.5rem;
+        border: 1px solid #e5e5e5;
+    }
+
+    h5 {
+        font-size: 1.35rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .card-wrapper {
+        gap: 0.4rem;
+    }
+
+    .placeholder {
+        width: 96px;
+        height: 96px;
+        margin: 2px;
+    }
+
+    .dropzone {
+        width: 44vw;
+        height: 44vw;
+        max-width: 220px;
+        max-height: 220px;
+        margin: 4px;
+        font-size: 1.25rem;
+    }
+
+    .dropzone-wrapper {
+        justify-content: space-between;
+        gap: 0.25rem;
+    }
+
+    .card:hover {
+        transform: none;
+        border: 1px solid #ccc;
+    }
+
+    .mobile-hint {
+        font-size: 0.9rem;
+    }
 }
