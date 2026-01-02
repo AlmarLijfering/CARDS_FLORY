@@ -6,12 +6,33 @@ Drag and Drop Image Gallery
 
 {% block content %}
 <div class="container-fluid">
-  <div class="row g-3">
-    <div class="col-12 col-lg-7">
+  <div class="row g-3 align-items-start">
+    <div class="col-12 col-lg-5 order-1 order-lg-2 floating-right selection-panel">
+      <div class="selection-header d-flex align-items-center justify-content-between">
+        <div>
+          <h5 class="mb-1">Your selection</h5>
+          <p class="text-muted small mb-2">Tap to add, drag to reorder, and keep scrolling the grid.</p>
+        </div>
+        <span id="selection-count" class="badge rounded-pill text-bg-light border">0/6</span>
+      </div>
+      <div class="dropzone-wrapper rail">
+        <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
+        <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
+        <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
+        <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
+        <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
+        <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
+      </div>
+      <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 mt-3">
+        <button id="finalize-btn" class="btn btn-primary finalize-btn flex-fill" disabled>Finalize Selection</button>
+        <span class="text-muted small text-center d-none d-sm-inline">Up to 6 cards</span>
+      </div>
+    </div>
+    <div class="col-12 col-lg-7 order-2 order-lg-1">
       <div id="left-container" class="container">
         <div class="d-flex align-items-center justify-content-between">
           <h5 class="mb-0">Available Images</h5>
-          <small class="text-muted d-lg-none mobile-hint">Tap a card to add it below</small>
+          <small class="text-muted d-lg-none mobile-hint">Tap a card to add it above</small>
         </div>
         <div class="card-wrapper">
           {% for image in images %}
@@ -25,30 +46,13 @@ Drag and Drop Image Gallery
         </div>
       </div>
     </div>
-    <div class="col-12 col-lg-5 floating-right">
-      <div class="row mb-3">
-        <div class="col-12 text-center">
-          <button id="finalize-btn" class="btn btn-primary finalize-btn" disabled>Finalize Selection</button>
-          <p class="text-muted small mt-2 d-lg-none">Slots accept up to 6 cards.</p>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-12 dropzone-wrapper">
-          <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
-          <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
-          <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
-          <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
-          <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
-          <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
 <script>
   const maxCards = 6;
   const finalizeBtn = document.getElementById('finalize-btn');
+  const selectionCount = document.getElementById('selection-count');
   const dropzones = Array.from(document.querySelectorAll('.dropzone'));
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   let draggedElement = null;
@@ -61,10 +65,18 @@ Drag and Drop Image Gallery
   }
 
   function updateFinalizeButton() {
-    if (selectedCardsCount > 0) {
-      finalizeBtn.removeAttribute('disabled');
-    } else {
-      finalizeBtn.setAttribute('disabled', true);
+    finalizeBtn.disabled = selectedCardsCount === 0;
+    finalizeBtn.textContent = selectedCardsCount > 0
+      ? `Finalize Selection (${selectedCardsCount}/${maxCards})`
+      : 'Finalize Selection';
+    updateSelectionCount();
+  }
+
+  function updateSelectionCount() {
+    if (selectionCount) {
+      selectionCount.textContent = `${selectedCardsCount}/${maxCards}`;
+      selectionCount.classList.toggle('text-bg-primary', selectedCardsCount > 0);
+      selectionCount.classList.toggle('text-bg-light', selectedCardsCount === 0);
     }
   }
 
@@ -97,7 +109,7 @@ Drag and Drop Image Gallery
 
     const slot = document.getElementById(`slot-${cardElement.dataset.id}`);
     if (slot) {
-      slot.classList.add('empty');
+      slot.classList.add('empty', 'selected');
       if (!movingExistingCard) {
         cardElement.style.visibility = 'hidden';
       }
@@ -135,7 +147,7 @@ Drag and Drop Image Gallery
     btn.onclick = () => {
       const slot = document.getElementById('slot-' + element.dataset.id);
       if (slot) {
-        slot.classList.remove('empty');
+        slot.classList.remove('empty', 'selected');
         slot.appendChild(element);
         element.style.visibility = 'visible';
       }
@@ -250,5 +262,7 @@ Drag and Drop Image Gallery
         }
       });
   });
+
+  updateFinalizeButton();
 </script>
 {% endblock %}
