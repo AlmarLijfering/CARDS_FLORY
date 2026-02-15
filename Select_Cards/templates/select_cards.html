@@ -255,11 +255,20 @@ Drag and Drop Image Gallery
       },
       body: JSON.stringify({ selectedCards }),
     })
-      .then(response => response.json())
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Unable to save your selection.');
+        }
+        return data;
+      })
       .then(data => {
         if (data.status === 'success') {
           window.location.href = '/overview_cards';
         }
+      })
+      .catch(error => {
+        alert(error.message || 'Unable to save your selection. Please try again.');
       });
   });
 
