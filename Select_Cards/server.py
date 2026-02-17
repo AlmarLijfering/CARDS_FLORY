@@ -14,7 +14,7 @@ selected_cards = []
 
 
 @app.route('/')
-def landing_page():
+def index():
     return render_template('landing.html')
 
 
