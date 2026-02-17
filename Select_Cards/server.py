@@ -63,7 +63,20 @@ def get_validated_session_cards():
 
 
 @app.route('/')
-def index():
+def landing_page():
+    return render_template('landing.html')
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get('username', '').strip()
+    login_message = f'Welcome, {username}!' if username else 'Welcome!'
+    return render_template('landing.html', login_message=login_message)
+
+
+@app.route('/select-cards')
+@app.route('/select_card')
+def select_cards():
     images = [
         {'id': i, 'small': f'Images/cards/cards_s{i:03d}.png', 'large': f'Images/cards/cards_l{i:03d}.png'}
         for i in range(MIN_CARD_ID, MAX_CARD_ID + 1)
