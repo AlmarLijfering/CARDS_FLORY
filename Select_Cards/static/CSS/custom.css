@@ -294,6 +294,24 @@ h5 {
     background: linear-gradient(135deg, #f8fbff 0%, #eef3ff 100%);
 }
 
+.landing-page .container {
+    border: none;
+    padding: 0;
+    min-height: auto;
+    text-align: left;
+}
+
+.landing-page h2.h5 {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+    color: #212529;
+}
+
+.landing-page .login-panel .h5 {
+    font-size: 1.25rem;
+    margin-bottom: 0;
+}
+
 .landing-hero,
 .login-panel {
     background: #fff;
