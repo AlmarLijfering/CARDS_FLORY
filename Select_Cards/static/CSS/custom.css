@@ -287,3 +287,59 @@ h5 {
         font-size: 0.9rem;
     }
 }
+
+/* Landing page */
+.landing-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fbff 0%, #eef3ff 100%);
+}
+
+.landing-hero,
+.login-panel {
+    background: #fff;
+    border: 1px solid #e6ebf5;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(35, 58, 98, 0.07);
+}
+
+.app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.app-tile {
+    aspect-ratio: 1 / 1;
+    border: 1px solid #d9e2f5;
+    border-radius: 14px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: #fdfefe;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    color: #212529;
+}
+
+.app-tile:hover {
+    transform: translateY(-3px);
+    border-color: #0d6efd;
+    box-shadow: 0 12px 24px rgba(13, 110, 253, 0.15);
+}
+
+.tile-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: #f4f7ff;
+    color: #0d6efd;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.85rem;
+    border: 1px solid #e1e8f7;
+    font-size: 2rem;
+}
+
