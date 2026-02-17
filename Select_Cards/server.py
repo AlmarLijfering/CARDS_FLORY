@@ -61,6 +61,7 @@ def get_validated_session_cards():
     return [int(card_id) for card_id in validated_cards]
 
 
+
 @app.route('/')
 def index():
     images = [
@@ -80,6 +81,7 @@ def log():
     return jsonify(status='error', message='No message provided'), 400
 
 
+
 @app.route('/finalize', methods=['POST'])
 def finalize():
     data = request.get_json(silent=True) or {}
@@ -92,6 +94,7 @@ def finalize():
     session['selected_cards'] = validated_cards
     app.logger.debug('Selected cards: %s', validated_cards)
     return jsonify(status='success')
+
 
 
 @app.route('/overview_cards')
