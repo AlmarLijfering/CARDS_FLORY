@@ -11,6 +11,18 @@ class ServerRoutesTestCase(unittest.TestCase):
         server.app.config['TESTING'] = True
         self.client = server.app.test_client()
 
+    def test_root_renders_landing_page(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('Choose an application', body)
+
+    def test_select_cards_route_renders_cards_page(self):
+        response = self.client.get('/select-cards')
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('Your selection', body)
+
     def test_finalize_accepts_valid_cards(self):
         response = self.client.post('/finalize', json={'selectedCards': ['1', '2', '3']})
         self.assertEqual(response.status_code, 200)
