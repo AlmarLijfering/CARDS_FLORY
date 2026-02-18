@@ -361,3 +361,36 @@ h5 {
     font-size: 2rem;
 }
 
+
+
+.app-grid-fixed-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-tile-tba {
+    border-style: dashed;
+    color: #5f6b7a;
+    background: #f9fbff;
+}
+
+.tile-image {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tile-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+@media (max-width: 575.98px) {
+    .app-grid-fixed-four {
+        grid-template-columns: 1fr;
+    }
+}

@@ -64,14 +64,23 @@ def get_validated_session_cards():
 
 @app.route('/')
 def landing_page():
-    return render_template('landing.html')
+    return render_template('landing.html', username=session.get('username'))
 
 
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username', '').strip()
-    login_message = f'Welcome, {username}!' if username else 'Welcome!'
-    return render_template('landing.html', login_message=login_message)
+    if username:
+        session['username'] = username
+    else:
+        session.pop('username', None)
+    return render_template('landing.html', username=session.get('username'))
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.pop('username', None)
+    return render_template('landing.html', username=None)
 
 
 @app.route('/select-cards')
