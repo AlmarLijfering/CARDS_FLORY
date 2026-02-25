@@ -15,7 +15,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-me')
 
 MIN_CARD_ID = 1
-MAX_CARD_ID = 102
+MAX_CARD_ID = 112
 MAX_SELECTED_CARDS = 6
 
 
