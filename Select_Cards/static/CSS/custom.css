@@ -67,8 +67,8 @@
 /* Styling for the drop zones */
 .dropzone {
     border: 2px dashed #ccc; /* Consistent border width for dropzones */
-    width: 256px;  /* Fixed width for large dropzones */
-    height: 256px; /* Fixed height for large dropzones */
+    width: 384px;  /* Fixed width for large dropzones */
+    height: 384px; /* Fixed height for large dropzones */
     display: flex;
     justify-content: center;
     align-items: center;
