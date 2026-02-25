@@ -1,7 +1,7 @@
 /* Container styling for the overall layout */
 .container {
-    border: 1px solid lightgray;
-    padding: 1px;
+    border: 1px solid #d6d6d6;
+    padding: 0;
     min-height: 256px;
     text-align: center;
     box-sizing: border-box;
@@ -11,7 +11,7 @@
 #left-container {
     background-color: lightgray;
     border-radius: 5px;
-    padding: 1px;
+    padding: 0;
     overflow-y: auto;
     max-height: 100vh;
     box-sizing: border-box;
@@ -19,21 +19,21 @@
 
 /* Increase top padding for the left container to ensure space when cards zoom */
 #left-container {
-    padding-top: 3px; /* Adjust this value as needed */
-    padding-left: 3px; /* Adjust this value as needed */
-    padding-right: 3px; /* Adjust this value as needed */
-    padding-bottom: 3px; /* Adjust this value as needed */
+    padding-top: 2px;
+    padding-left: 2px;
+    padding-right: 2px;
+    padding-bottom: 2px;
 }
 
 /* Styling for the draggable cards */
 .card {
     cursor: pointer;
     position: relative;
-    border: 1px solid #ccc; /* Reduced border width for default state */
+    border: 1px solid #c7c7c7;
     border-radius: 6px;
     overflow: hidden;
     transition: transform 0.3s, z-index 0.3s, opacity 0.3s;
-    margin: 5px; /* Ensure equal margin on all sides */
+    margin: 2px;
     box-sizing: border-box;
     opacity: 1;
 }
@@ -52,10 +52,42 @@
 
 /* Hover effect for cards */
 .card:hover {
-    transform: scale(1.75);
-    border: 3px solid #ccc; /* Increase border width when hovered */
+    transform: scale(1.55);
+    border: 2px solid #c1c1c1;
     z-index: 1000; /* Ensure it appears on top */
     opacity: 1; /* Ensure full opacity when hovered */
+}
+
+.card.zoom-inward-top-left:hover {
+    transform-origin: top left;
+}
+
+.card.zoom-inward-top-right:hover {
+    transform-origin: top right;
+}
+
+.card.zoom-inward-bottom-left:hover {
+    transform-origin: bottom left;
+}
+
+.card.zoom-inward-bottom-right:hover {
+    transform-origin: bottom right;
+}
+
+.card.zoom-inward-top:hover {
+    transform-origin: top center;
+}
+
+.card.zoom-inward-bottom:hover {
+    transform-origin: bottom center;
+}
+
+.card.zoom-inward-left:hover {
+    transform-origin: center left;
+}
+
+.card.zoom-inward-right:hover {
+    transform-origin: center right;
 }
 
 /* Disable zoom for cards in the dropzone */
@@ -66,7 +98,7 @@
 
 /* Styling for the drop zones */
 .dropzone {
-    border: 2px dashed #ccc; /* Consistent border width for dropzones */
+    border: 1px dashed #c8c8c8;
     width: 384px;  /* Fixed width for large dropzones */
     height: 384px; /* Fixed height for large dropzones */
     display: flex;
@@ -75,7 +107,7 @@
     font-size: 50px;
     font-weight: bold;
     color: #aaa;
-    margin: 5px; /* Ensure equal margin on all sides */
+    margin: 2px;
     box-sizing: border-box;
     background-color: #e8e8e8;
 }
@@ -88,14 +120,14 @@
 /* Styling for the remove button */
 .remove-btn {
     position: absolute;
-    top: 5px;
-    right: 5px;
+    top: 4px;
+    right: 4px;
     background: red;
     color: white;
     border: none;
     border-radius: 50%;
-    width: 25px;
-    height: 25px;
+    width: 22px;
+    height: 22px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -107,8 +139,8 @@
 .placeholder {
     width: 128px;  /* Match the width of the small card */
     height: 128px; /* Match the height of the small card */
-    border: 1px dashed #ccc; /* Consistent border width with card */
-    margin: 3px; /* Ensure equal margin on all sides */
+    border: 1px dashed #c8c8c8;
+    margin: 2px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -140,7 +172,7 @@
 .card-wrapper {
     display: flex;
     flex-wrap: wrap;
-    gap: 1px;
+    gap: 0;
     justify-content: center;
 }
 
@@ -151,7 +183,7 @@
     justify-content: center;
     margin: 0;
     overflow-x: hidden; /* Prevent horizontal scroll */
-    gap: 0.35rem;
+    gap: 0.2rem;
 }
 
 /* Styling for the heading */
@@ -173,7 +205,7 @@ h5 {
     position: sticky;
     top: 0;
     background-color: white;
-    padding: 1px;
+    padding: 0;
     border-radius: 7px;
     max-height: 100vh;
     overflow-y: auto;
@@ -183,7 +215,7 @@ h5 {
 .selection-panel {
     border: 1px solid #e5e5e5;
     border-radius: 10px;
-    padding: 12px;
+    padding: 8px;
 }
 
 .selection-header .badge {
@@ -286,6 +318,50 @@ h5 {
     .mobile-hint {
         font-size: 0.9rem;
     }
+}
+
+.card-context-menu {
+    position: fixed;
+    z-index: 2500;
+    background: #fff;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    min-width: 140px;
+}
+
+.card-context-menu .context-action {
+    width: 100%;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    text-align: left;
+    padding: 6px 8px;
+    font-size: 0.9rem;
+}
+
+.card-context-menu .context-action:hover {
+    background: #f1f5ff;
+}
+
+.card-zoom-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2400;
+    background: rgba(0, 0, 0, 0.68);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.card-zoom-overlay img {
+    max-width: min(88vw, 680px);
+    max-height: 88vh;
+    border: 2px solid #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
 }
 
 /* Landing page */
