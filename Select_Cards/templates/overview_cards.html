@@ -33,7 +33,7 @@
 
 <script>
   document.getElementById('back-btn').addEventListener('click', () => {
-    window.location.href = '/';
+    window.location.href = "{{ url_for('select_cards') }}";
   });
 
   // Load an image URL into an Image() object (not the DOM <img>) for consistent rendering
