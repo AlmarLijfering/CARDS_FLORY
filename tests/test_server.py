@@ -23,6 +23,40 @@ class ServerRoutesTestCase(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertIn('Your selection', body)
 
+    def test_themes_page_renders(self):
+        response = self.client.get('/themes')
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('Theme labels', body)
+
+    def test_themes_page_saves_labels(self):
+        payload = {f'label_{index}': f'My label {index}' for index in range(1, 7)}
+        with self.client as client:
+            response = client.post('/themes', data=payload)
+            self.assertEqual(response.status_code, 302)
+            with client.session_transaction() as session_data:
+                self.assertEqual(session_data['theme_labels'][0], 'My label 1')
+                self.assertEqual(len(session_data['theme_labels']), 6)
+
+    def test_card_labels_page_renders(self):
+        response = self.client.get('/card-labels')
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('Card labels', body)
+
+    def test_card_labels_page_saves_unique_labels(self):
+        with self.client as client:
+            response = client.post('/card-labels', data={
+                'card_1_labels': ['1', '1', '2'],
+                'card_2_labels': ['6'],
+                'card_200_labels': ['4'],
+            })
+            self.assertEqual(response.status_code, 302)
+            with client.session_transaction() as session_data:
+                self.assertEqual(session_data['card_labels']['1'], [1, 2])
+                self.assertEqual(session_data['card_labels']['2'], [6])
+                self.assertNotIn('200', session_data['card_labels'])
+
     def test_finalize_accepts_valid_cards(self):
         response = self.client.post('/finalize', json={'selectedCards': ['1', '2', '3']})
         self.assertEqual(response.status_code, 200)
@@ -34,7 +68,7 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.get_json()['status'], 'error')
 
     def test_finalize_rejects_out_of_range_ids(self):
-        response = self.client.post('/finalize', json={'selectedCards': [103]})
+        response = self.client.post('/finalize', json={'selectedCards': [113]})
         self.assertEqual(response.status_code, 400)
         self.assertIn('between', response.get_json()['message'])
 

@@ -534,3 +534,15 @@ h5 {
         padding-bottom: 0.35rem;
     }
 }
+
+.card-labels-table-wrapper {
+    max-height: 70vh;
+}
+
+.card-label-preview {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border: 1px solid #d6d6d6;
+    border-radius: 6px;
+}

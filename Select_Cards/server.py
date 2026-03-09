@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from waitress import serve
 import logging
 import os
@@ -17,6 +17,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-m
 MIN_CARD_ID = 1
 MAX_CARD_ID = 112
 MAX_SELECTED_CARDS = 6
+THEME_SLOT_COUNT = 6
 
 
 def parse_selected_cards(payload):
@@ -61,6 +62,55 @@ def get_validated_session_cards():
     return [int(card_id) for card_id in validated_cards]
 
 
+def get_theme_labels():
+    stored_labels = session.get('theme_labels')
+    if isinstance(stored_labels, list) and len(stored_labels) == THEME_SLOT_COUNT:
+        normalized = []
+        for index, value in enumerate(stored_labels, start=1):
+            text = value.strip() if isinstance(value, str) else ''
+            normalized.append(text or f'Label {index}')
+        return normalized
+    return [f'Label {index}' for index in range(1, THEME_SLOT_COUNT + 1)]
+
+
+def get_validated_card_labels():
+    raw_assignments = session.get('card_labels')
+    if not isinstance(raw_assignments, dict):
+        return {}
+
+    validated = {}
+    for raw_card_id, raw_labels in raw_assignments.items():
+        try:
+            card_id = int(raw_card_id)
+        except (TypeError, ValueError):
+            continue
+
+        if card_id < MIN_CARD_ID or card_id > MAX_CARD_ID:
+            continue
+
+        if not isinstance(raw_labels, list):
+            continue
+
+        unique_labels = []
+        seen = set()
+        for raw_label in raw_labels:
+            try:
+                label_id = int(raw_label)
+            except (TypeError, ValueError):
+                continue
+
+            if label_id < 1 or label_id > THEME_SLOT_COUNT or label_id in seen:
+                continue
+
+            seen.add(label_id)
+            unique_labels.append(label_id)
+
+        if unique_labels:
+            validated[str(card_id)] = unique_labels
+
+    return validated
+
+
 
 @app.route('/')
 def landing_page():
@@ -97,6 +147,68 @@ def select_cards():
         for i in range(MIN_CARD_ID, MAX_CARD_ID + 1)
     ]
     return render_template('select_cards.html', images=images)
+
+
+@app.route('/themes', methods=['GET', 'POST'])
+def themes_page():
+    if request.method == 'POST':
+        labels = []
+        for index in range(1, THEME_SLOT_COUNT + 1):
+            field = f'label_{index}'
+            labels.append(request.form.get(field, '').strip() or f'Label {index}')
+        session['theme_labels'] = labels
+        return redirect(url_for('themes_page', saved='1'))
+
+    return render_template(
+        'themes.html',
+        labels=get_theme_labels(),
+        saved=request.args.get('saved') == '1'
+    )
+
+
+@app.route('/card-labels', methods=['GET', 'POST'])
+def card_labels_page():
+    if request.method == 'POST':
+        stored_assignments = {}
+        for card_id in range(MIN_CARD_ID, MAX_CARD_ID + 1):
+            selected_labels = request.form.getlist(f'card_{card_id}_labels')
+            unique_labels = []
+            seen = set()
+
+            for raw_label in selected_labels:
+                try:
+                    label_id = int(raw_label)
+                except (TypeError, ValueError):
+                    continue
+
+                if label_id < 1 or label_id > THEME_SLOT_COUNT or label_id in seen:
+                    continue
+
+                seen.add(label_id)
+                unique_labels.append(label_id)
+
+            if unique_labels:
+                stored_assignments[str(card_id)] = unique_labels
+
+        session['card_labels'] = stored_assignments
+        return redirect(url_for('card_labels_page', saved='1'))
+
+    theme_labels = get_theme_labels()
+    card_assignments = get_validated_card_labels()
+    cards = []
+    for card_id in range(MIN_CARD_ID, MAX_CARD_ID + 1):
+        cards.append({
+            'id': card_id,
+            'small': f'Images/cards/cards_s{card_id:03d}.png',
+            'assigned_labels': card_assignments.get(str(card_id), [])
+        })
+
+    return render_template(
+        'card_labels.html',
+        cards=cards,
+        theme_labels=theme_labels,
+        saved=request.args.get('saved') == '1'
+    )
 
 
 @app.route('/log', methods=['POST'])

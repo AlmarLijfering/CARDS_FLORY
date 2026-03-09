@@ -49,7 +49,7 @@
             <span class="text-uppercase small fw-semibold text-muted">Cards Platform</span>
           </div>
           <h1 class="display-6 fw-bold mb-2">Choose an application</h1>
-          <p class="text-muted mb-4">Use the launcher below to open each card tool. Three additional applications are coming soon.</p>
+          <p class="text-muted mb-4">Use the launcher below to open each card tool.</p>
 
           <div class="app-grid app-grid-fixed-four">
             <a class="app-tile text-decoration-none" href="{{ url_for('select_cards') }}" aria-label="Open Select Cards application">
@@ -60,17 +60,17 @@
               <p class="small text-muted mb-0">Build and reorder your six-card selection.</p>
             </a>
 
-            <div class="app-tile app-tile-tba" aria-label="Application to be announced">
-              <div class="tile-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></div>
-              <h2 class="h5 mb-1">TBA</h2>
-              <p class="small text-muted mb-0">To be announced.</p>
-            </div>
+            <a class="app-tile text-decoration-none" href="{{ url_for('themes_page') }}" aria-label="Open Theme Labels application">
+              <div class="tile-icon" aria-hidden="true"><i class="bi bi-palette"></i></div>
+              <h2 class="h5 mb-1">Theme Labels</h2>
+              <p class="small text-muted mb-0">Create and save 6 labels for themes.</p>
+            </a>
 
-            <div class="app-tile app-tile-tba" aria-label="Application to be announced">
-              <div class="tile-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></div>
-              <h2 class="h5 mb-1">TBA</h2>
-              <p class="small text-muted mb-0">To be announced.</p>
-            </div>
+            <a class="app-tile text-decoration-none" href="{{ url_for('card_labels_page') }}" aria-label="Open Card Labels application">
+              <div class="tile-icon" aria-hidden="true"><i class="bi bi-tags"></i></div>
+              <h2 class="h5 mb-1">Card Labels</h2>
+              <p class="small text-muted mb-0">Assign labels to cards without duplicates.</p>
+            </a>
 
             <div class="app-tile app-tile-tba" aria-label="Application to be announced">
               <div class="tile-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></div>
