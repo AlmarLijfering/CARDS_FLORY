@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Response
 from waitress import serve
 import logging
 import os
 import sys
+import json
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +19,7 @@ MIN_CARD_ID = 1
 MAX_CARD_ID = 112
 MAX_SELECTED_CARDS = 6
 THEME_SLOT_COUNT = 6
+SUPPORTED_LANGUAGES = {'en', 'nl', 'ro'}
 
 
 def parse_selected_cards(payload):
@@ -111,6 +113,49 @@ def get_validated_card_labels():
     return validated
 
 
+def get_validated_language():
+    stored = session.get('language')
+    if isinstance(stored, str) and stored in SUPPORTED_LANGUAGES:
+        return stored
+    return 'en'
+
+
+def parse_language(payload):
+    if not isinstance(payload, str):
+        return None
+    normalized = payload.strip().lower()
+    if normalized in SUPPORTED_LANGUAGES:
+        return normalized
+    return None
+
+
+def normalize_import_payload(data):
+    if not isinstance(data, dict):
+        return None, 'Import payload must be a JSON object'
+
+    raw_theme_labels = data.get('theme_labels')
+    if not isinstance(raw_theme_labels, list) or len(raw_theme_labels) != THEME_SLOT_COUNT:
+        return None, f'theme_labels must be a list with {THEME_SLOT_COUNT} entries'
+
+    normalized_theme_labels = []
+    for index, value in enumerate(raw_theme_labels, start=1):
+        text = value.strip() if isinstance(value, str) else ''
+        normalized_theme_labels.append(text or f'Label {index}')
+
+    raw_assignments = data.get('card_labels')
+    if not isinstance(raw_assignments, dict):
+        return None, 'card_labels must be an object of card-to-label assignments'
+
+    session['theme_labels'] = normalized_theme_labels
+    session['card_labels'] = raw_assignments
+    normalized_assignments = get_validated_card_labels()
+
+    return {
+        'theme_labels': normalized_theme_labels,
+        'card_labels': normalized_assignments,
+    }, None
+
+
 
 @app.route('/')
 def landing_page():
@@ -147,7 +192,12 @@ def select_cards():
         }
         for i in range(MIN_CARD_ID, MAX_CARD_ID + 1)
     ]
-    return render_template('select_cards.html', images=images, theme_labels=theme_labels)
+    return render_template(
+        'select_cards.html',
+        images=images,
+        theme_labels=theme_labels,
+        current_language=get_validated_language(),
+    )
 
 
 @app.route('/themes', methods=['GET', 'POST'])
@@ -212,6 +262,37 @@ def card_labels_page():
     )
 
 
+@app.route('/card-labels/export', methods=['GET'])
+def export_card_labels():
+    payload = {
+        'theme_labels': get_theme_labels(),
+        'card_labels': get_validated_card_labels(),
+    }
+    return Response(
+        json.dumps(payload, indent=2),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment; filename=card_labels_bundle.json'},
+    )
+
+
+@app.route('/card-labels/import', methods=['POST'])
+def import_card_labels():
+    uploaded = request.files.get('bundle_file')
+    if not uploaded:
+        return redirect(url_for('card_labels_page', import_error='missing_file'))
+
+    try:
+        payload = json.loads(uploaded.read().decode('utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return redirect(url_for('card_labels_page', import_error='invalid_json'))
+
+    _, error = normalize_import_payload(payload)
+    if error:
+        return redirect(url_for('card_labels_page', import_error=error))
+
+    return redirect(url_for('card_labels_page', imported='1'))
+
+
 @app.route('/log', methods=['POST'])
 def log():
     data = request.get_json(silent=True) or {}
@@ -233,7 +314,21 @@ def finalize():
         return jsonify(status='error', message=error), 400
 
     session['selected_cards'] = validated_cards
+    chosen_language = parse_language(data.get('language'))
+    if chosen_language:
+        session['language'] = chosen_language
     app.logger.debug('Selected cards: %s', validated_cards)
+    return jsonify(status='success')
+
+
+@app.route('/set-language', methods=['POST'])
+def set_language():
+    data = request.get_json(silent=True) or {}
+    chosen_language = parse_language(data.get('language'))
+    if not chosen_language:
+        return jsonify(status='error', message='Invalid language'), 400
+
+    session['language'] = chosen_language
     return jsonify(status='success')
 
 
@@ -245,7 +340,11 @@ def overview_cards():
         {'id': card_id, 'large': f'Images/cards/cards_l{card_id:03d}.png'}
         for card_id in selected_cards
     ]
-    return render_template('overview_cards.html', images=images)
+    return render_template(
+        'overview_cards.html',
+        images=images,
+        current_language=get_validated_language(),
+    )
 
 
 if __name__ == '__main__':
