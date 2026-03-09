@@ -17,6 +17,7 @@
             <div class="d-flex gap-2">
               <a class="btn btn-outline-secondary" href="{{ url_for('landing_page') }}">Back</a>
               <a class="btn btn-outline-primary" href="{{ url_for('themes_page') }}">Edit theme labels</a>
+              <a class="btn btn-outline-success" href="{{ url_for('export_card_labels') }}">Export labels bundle</a>
             </div>
           </div>
 
@@ -25,6 +26,24 @@
             Card label assignments saved.
           </div>
           {% endif %}
+
+          {% if request.args.get('imported') == '1' %}
+          <div class="alert alert-success" role="alert">
+            Labels bundle imported successfully.
+          </div>
+          {% endif %}
+
+          {% if request.args.get('import_error') %}
+          <div class="alert alert-danger" role="alert">
+            Could not import bundle: {{ request.args.get('import_error') }}
+          </div>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('import_card_labels') }}" enctype="multipart/form-data" class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+            <label for="bundle_file" class="form-label mb-0">Import labels bundle (JSON)</label>
+            <input id="bundle_file" name="bundle_file" type="file" class="form-control" accept="application/json,.json" required style="max-width: 340px;">
+            <button type="submit" class="btn btn-outline-primary">Import bundle</button>
+          </form>
 
           <form method="post">
             <div class="card-labels-table-wrapper">

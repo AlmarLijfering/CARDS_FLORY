@@ -38,9 +38,9 @@ Select Cards
           <div class="d-flex align-items-center gap-2">
             <label for="language-select" class="visually-hidden">Language</label>
             <select id="language-select" class="form-select form-select-sm" aria-label="Language selector">
-              <option value="en">EN</option>
-              <option value="nl">NL</option>
-              <option value="ro">RO</option>
+              <option value="en" {% if current_language == 'en' %}selected{% endif %}>EN</option>
+              <option value="nl" {% if current_language == 'nl' %}selected{% endif %}>NL</option>
+              <option value="ro" {% if current_language == 'ro' %}selected{% endif %}>RO</option>
             </select>
             <small class="text-muted d-lg-none mobile-hint" data-i18n="mobileHint">Tap a card to add it above</small>
           </div>
@@ -448,6 +448,19 @@ Select Cards
     galleryLoading.style.display = 'none';
   }
 
+
+  function persistLanguage(lang) {
+    fetch('/set-language', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ language: lang }),
+    }).catch(() => {
+      // Best-effort persistence only.
+    });
+  }
+
   function applyLanguage(lang) {
     currentLanguage = lang;
     const dict = translations[lang] || translations.en;
@@ -460,6 +473,8 @@ Select Cards
       if (dict[key]) node.placeholder = dict[key];
     });
     updateFinalizeButton();
+    updateGalleryVisibility();
+    persistLanguage(lang);
   }
 
   searchInput.addEventListener('input', updateGalleryVisibility);
@@ -529,7 +544,7 @@ Select Cards
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ selectedCards }),
+      body: JSON.stringify({ selectedCards, language: currentLanguage }),
     })
       .then(async response => {
         const data = await response.json();
@@ -549,7 +564,6 @@ Select Cards
   });
 
   updateFinalizeButton();
-  updateGalleryVisibility();
   applyLanguage(languageSelect.value);
 </script>
 {% endblock %}

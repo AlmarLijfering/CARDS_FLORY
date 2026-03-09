@@ -6,14 +6,6 @@
 <div class="container no-hover">
   <div class="row mb-3">
     <div class="col-12 text-center">
-      <div class="d-flex justify-content-end mb-2">
-        <label for="language-select" class="visually-hidden">Language</label>
-        <select id="language-select" class="form-select form-select-sm w-auto" aria-label="Language selector">
-          <option value="en">EN</option>
-          <option value="nl">NL</option>
-          <option value="ro">RO</option>
-        </select>
-      </div>
       <h5 data-i18n="overviewHeading">Overview of Selected Cards</h5>
       <button id="back-btn" class="btn btn-secondary" data-i18n="newSelection">New Selection</button>
       <button id="print-btn" class="btn btn-primary" data-i18n="printPdf">Print to PDF</button>
@@ -40,8 +32,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 
 <script>
-  const languageSelect = document.getElementById('language-select');
-  let currentLanguage = 'en';
+  let currentLanguage = {{ current_language|tojson }};
   const translations = {
     en: {
       overviewHeading: 'Overview of Selected Cards', newSelection: 'New Selection', printPdf: 'Print to PDF',
@@ -63,15 +54,13 @@
   }
 
   function applyLanguage(lang) {
-    currentLanguage = lang;
-    const dict = translations[lang] || translations.en;
+    currentLanguage = translations[lang] ? lang : 'en';
+    const dict = translations[currentLanguage] || translations.en;
     document.querySelectorAll('[data-i18n]').forEach(node => {
       const key = node.dataset.i18n;
       if (dict[key]) node.textContent = dict[key];
     });
   }
-
-  languageSelect.addEventListener('change', () => applyLanguage(languageSelect.value));
 
   document.getElementById('back-btn').addEventListener('click', () => {
     window.location.href = "{{ url_for('select_cards') }}";
@@ -179,6 +168,6 @@
     doc.save(t('pdfName'));
   });
 
-  applyLanguage(languageSelect.value);
+  applyLanguage(currentLanguage);
 </script>
 {% endblock %}

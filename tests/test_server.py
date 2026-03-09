@@ -62,6 +62,20 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()['status'], 'success')
 
+    def test_finalize_persists_language(self):
+        with self.client as client:
+            response = client.post('/finalize', json={'selectedCards': ['1', '2'], 'language': 'nl'})
+            self.assertEqual(response.status_code, 200)
+            with client.session_transaction() as session_data:
+                self.assertEqual(session_data['language'], 'nl')
+
+    def test_set_language_route(self):
+        with self.client as client:
+            response = client.post('/set-language', json={'language': 'ro'})
+            self.assertEqual(response.status_code, 200)
+            with client.session_transaction() as session_data:
+                self.assertEqual(session_data['language'], 'ro')
+
     def test_finalize_rejects_non_json_payload(self):
         response = self.client.post('/finalize', data='not-json', content_type='text/plain')
         self.assertEqual(response.status_code, 400)
@@ -99,6 +113,37 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertNotIn('cards_l004.png', body)
+
+    def test_overview_uses_session_language(self):
+        with self.client as client:
+            with client.session_transaction() as session_data:
+                session_data['language'] = 'nl'
+            response = client.get('/overview_cards')
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('"nl"', body)
+
+    def test_export_labels_bundle_includes_theme_and_assignments(self):
+        with self.client as client:
+            with client.session_transaction() as session_data:
+                session_data['theme_labels'] = [f'Label {i}' for i in range(1, 7)]
+                session_data['card_labels'] = {'1': [1, 2], '2': [6]}
+            response = client.get('/card-labels/export')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, 'application/json')
+        payload = response.get_json()
+        self.assertEqual(len(payload['theme_labels']), 6)
+        self.assertEqual(payload['card_labels']['1'], [1, 2])
+
+    def test_import_labels_bundle_sets_theme_and_assignments(self):
+        import io
+        bundle = io.BytesIO(b'{"theme_labels": ["A", "B", "C", "D", "E", "F"], "card_labels": {"5": [1, 4], "7": [3]}}')
+        with self.client as client:
+            response = client.post('/card-labels/import', data={'bundle_file': (bundle, 'labels.json')}, content_type='multipart/form-data')
+            self.assertEqual(response.status_code, 302)
+            with client.session_transaction() as session_data:
+                self.assertEqual(session_data['theme_labels'][0], 'A')
+                self.assertEqual(session_data['card_labels']['5'], [1, 4])
 
 
 if __name__ == '__main__':
