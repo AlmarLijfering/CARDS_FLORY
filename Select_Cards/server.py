@@ -136,17 +136,18 @@ def logout():
 @app.route('/select-cards')
 @app.route('/select_card')
 def select_cards():
-    themes = ['animals', 'nature', 'people', 'abstract']
+    theme_labels = get_theme_labels()
+    card_assignments = get_validated_card_labels()
     images = [
         {
             'id': i,
             'small': f'Images/cards/cards_s{i:03d}.png',
             'large': f'Images/cards/cards_l{i:03d}.png',
-            'theme': themes[(i - 1) % len(themes)]
+            'label_ids': card_assignments.get(str(i), []),
         }
         for i in range(MIN_CARD_ID, MAX_CARD_ID + 1)
     ]
-    return render_template('select_cards.html', images=images)
+    return render_template('select_cards.html', images=images, theme_labels=theme_labels)
 
 
 @app.route('/themes', methods=['GET', 'POST'])
