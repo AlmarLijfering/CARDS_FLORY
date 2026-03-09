@@ -10,10 +10,10 @@ Select Cards
     <div class="col-12 col-lg-5 order-1 order-lg-2 floating-right selection-panel">
       <div class="selection-header d-flex align-items-center justify-content-between">
         <div>
-          <h5 class="mb-1">Your selection</h5>
-          <p class="text-muted small mb-2">Tap to add, drag to reorder, and keep scrolling the grid.</p>
+          <h5 class="mb-1" data-i18n="selectionHeading">Your selection</h5>
+          <p class="text-muted small mb-2" data-i18n="selectionHint">Tap to add, drag to reorder, and keep scrolling the grid.</p>
         </div>
-        <span id="selection-count" class="badge rounded-pill text-bg-light border">0/6</span>
+        <span id="selection-count" class="badge rounded-pill text-bg-light border" aria-live="polite" aria-atomic="true">0/6 selected</span>
       </div>
       <div class="dropzone-wrapper rail">
         <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
@@ -23,27 +23,51 @@ Select Cards
         <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
         <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
       </div>
-      <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 mt-3">
-        <button id="finalize-btn" class="btn btn-primary finalize-btn flex-fill" disabled>Finalize Selection</button>
-        <span class="text-muted small text-center d-none d-sm-inline">Up to 6 cards</span>
+      <div class="selection-actions d-flex flex-column gap-2 mt-3">
+        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+          <button id="finalize-btn" class="btn btn-primary finalize-btn flex-fill" disabled data-i18n="finalize">Finalize Selection</button>
+          <span class="text-muted small text-center d-none d-sm-inline" data-i18n="limitHint">Up to 6 cards</span>
+        </div>
+        <p class="small text-muted mb-0" data-i18n="nextStep">Next step: after finalizing, you will see an overview to review or share your selected cards.</p>
       </div>
     </div>
     <div class="col-12 col-lg-7 order-2 order-lg-1">
       <div id="left-container" class="container">
-        <div class="d-flex align-items-center justify-content-between">
-          <h5 class="mb-0">Available Images</h5>
-          <small class="text-muted d-lg-none mobile-hint">Tap a card to add it above</small>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h5 class="mb-0" data-i18n="availableImages">Available Images</h5>
+          <div class="d-flex align-items-center gap-2">
+            <label for="language-select" class="visually-hidden">Language</label>
+            <select id="language-select" class="form-select form-select-sm" aria-label="Language selector">
+              <option value="en">EN</option>
+              <option value="nl">NL</option>
+            </select>
+            <small class="text-muted d-lg-none mobile-hint" data-i18n="mobileHint">Tap a card to add it above</small>
+          </div>
         </div>
-        <div class="card-wrapper">
+        <div class="gallery-toolbar" role="region" aria-label="Search and filter cards">
+          <label for="search-input" class="visually-hidden">Search cards</label>
+          <input id="search-input" type="search" class="form-control" placeholder="Search by card number or theme">
+          <label for="filter-select" class="visually-hidden">Filter theme</label>
+          <select id="filter-select" class="form-select" aria-label="Filter by theme">
+            <option value="all">All themes</option>
+            <option value="animals">Animals</option>
+            <option value="nature">Nature</option>
+            <option value="people">People</option>
+            <option value="abstract">Abstract</option>
+          </select>
+          <div id="gallery-status" class="small text-muted" aria-live="polite">{{ images|length }} cards available</div>
+        </div>
+        <div class="card-wrapper" role="grid" aria-label="Available image cards">
           {% for image in images %}
-          <div id="slot-{{ image.id }}" class="placeholder empty">
+          <div id="slot-{{ image.id }}" class="placeholder empty" data-theme="{{ image.theme }}" data-search="{{ image.id }} {{ image.theme }}" role="gridcell">
             <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
-              data-large="{{ url_for('static', filename=image.large) }}">
-              <img src="{{ url_for('static', filename=image.small) }}" class="small" alt="Image {{ image.id }}">
+              data-large="{{ url_for('static', filename=image.large) }}" aria-label="Card {{ image.id }} ({{ image.theme }})" tabindex="0">
+              <img src="{{ url_for('static', filename=image.small) }}" class="small" loading="lazy" alt="Card {{ image.id }} - {{ image.theme }}">
             </div>
           </div>
           {% endfor %}
         </div>
+        <div id="gallery-loading" class="small text-muted mt-2" aria-live="polite">Loading cards...</div>
       </div>
     </div>
   </div>
@@ -54,6 +78,12 @@ Select Cards
   const finalizeBtn = document.getElementById('finalize-btn');
   const selectionCount = document.getElementById('selection-count');
   const dropzones = Array.from(document.querySelectorAll('.dropzone'));
+  const placeholders = Array.from(document.querySelectorAll('.placeholder'));
+  const searchInput = document.getElementById('search-input');
+  const filterSelect = document.getElementById('filter-select');
+  const galleryStatus = document.getElementById('gallery-status');
+  const galleryLoading = document.getElementById('gallery-loading');
+  const languageSelect = document.getElementById('language-select');
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   let draggedElement = null;
   let draggedFromPlaceholder = false;
@@ -71,6 +101,19 @@ Select Cards
   ];
   let contextMenu = null;
   let zoomOverlay = null;
+  let currentLanguage = 'en';
+  const translations = {
+    en: {
+      selectionHeading: 'Your selection', selectionHint: 'Tap to add, drag to reorder, and keep scrolling the grid.',
+      finalize: 'Finalize Selection', limitHint: 'Up to 6 cards', nextStep: 'Next step: after finalizing, you will see an overview to review or share your selected cards.',
+      availableImages: 'Available Images', mobileHint: 'Tap a card to add it above'
+    },
+    nl: {
+      selectionHeading: 'Jouw selectie', selectionHint: 'Tik om toe te voegen, sleep om te herschikken en blijf door het raster scrollen.',
+      finalize: 'Selectie afronden', limitHint: 'Maximaal 6 kaarten', nextStep: 'Volgende stap: na het afronden zie je een overzicht om je kaarten te controleren of te delen.',
+      availableImages: 'Beschikbare afbeeldingen', mobileHint: 'Tik op een kaart om die hierboven toe te voegen'
+    }
+  };
 
 
   function getFirstEmptyDropzone() {
@@ -79,15 +122,16 @@ Select Cards
 
   function updateFinalizeButton() {
     finalizeBtn.disabled = selectedCardsCount === 0;
+    const finalizeLabel = (translations[currentLanguage] && translations[currentLanguage].finalize) || 'Finalize Selection';
     finalizeBtn.textContent = selectedCardsCount > 0
-      ? `Finalize Selection (${selectedCardsCount}/${maxCards})`
-      : 'Finalize Selection';
+      ? `${finalizeLabel} (${selectedCardsCount}/${maxCards})`
+      : finalizeLabel;
     updateSelectionCount();
   }
 
   function updateSelectionCount() {
     if (selectionCount) {
-      selectionCount.textContent = `${selectedCardsCount}/${maxCards}`;
+      selectionCount.textContent = `${selectedCardsCount}/${maxCards} selected`;
       selectionCount.classList.toggle('text-bg-primary', selectedCardsCount > 0);
       selectionCount.classList.toggle('text-bg-light', selectedCardsCount === 0);
     }
@@ -123,8 +167,10 @@ Select Cards
     const slot = document.getElementById(`slot-${cardElement.dataset.id}`);
     if (slot) {
       slot.classList.add('empty', 'selected');
+      cardElement.setAttribute('aria-disabled', 'true');
+      cardElement.setAttribute('draggable', 'false');
       if (!movingExistingCard) {
-        cardElement.style.visibility = 'hidden';
+        cardElement.classList.add('selected-in-gallery');
       }
     }
 
@@ -157,12 +203,15 @@ Select Cards
     const btn = document.createElement('button');
     btn.className = 'remove-btn';
     btn.innerHTML = '&times;';
+    btn.setAttribute('aria-label', `Remove card ${element.dataset.id} from selection`);
     btn.onclick = () => {
       const slot = document.getElementById('slot-' + element.dataset.id);
       if (slot) {
         slot.classList.remove('empty', 'selected');
         slot.appendChild(element);
-        element.style.visibility = 'visible';
+        element.classList.remove('selected-in-gallery');
+        element.setAttribute('aria-disabled', 'false');
+        element.setAttribute('draggable', 'true');
       }
       dropzone.classList.add('empty');
       card.remove();
@@ -178,6 +227,7 @@ Select Cards
 
   function applyInwardZoomClass(cardElement) {
     if (!cardElement) return;
+    if (cardElement.classList.contains('selected-in-gallery')) return;
 
     inwardZoomClasses.forEach(cls => cardElement.classList.remove(cls));
 
@@ -338,6 +388,16 @@ Select Cards
     card.addEventListener('dragend', handleDragEnd);
     card.addEventListener('mouseenter', () => applyInwardZoomClass(card));
     card.addEventListener('contextmenu', (e) => openCardContextMenu(e, card));
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handleCardSelection(card);
+      }
+      if (event.key.startsWith('Arrow')) {
+        event.preventDefault();
+        moveFocus(card, event.key);
+      }
+    });
 
     if (isTouchDevice) {
       card.addEventListener('click', () => handleCardSelection(card));
@@ -345,6 +405,48 @@ Select Cards
   }
 
   document.querySelectorAll('.card').forEach(bindCardInteractions);
+
+  function moveFocus(currentCard, key) {
+    const visibleCards = Array.from(document.querySelectorAll('.placeholder:not(.hidden-by-filter) .card'));
+    const currentIndex = visibleCards.indexOf(currentCard);
+    if (currentIndex === -1) return;
+    const columns = Math.max(1, Math.floor(document.querySelector('.card-wrapper').offsetWidth / 132));
+    let nextIndex = currentIndex;
+    if (key === 'ArrowRight') nextIndex = Math.min(visibleCards.length - 1, currentIndex + 1);
+    if (key === 'ArrowLeft') nextIndex = Math.max(0, currentIndex - 1);
+    if (key === 'ArrowDown') nextIndex = Math.min(visibleCards.length - 1, currentIndex + columns);
+    if (key === 'ArrowUp') nextIndex = Math.max(0, currentIndex - columns);
+    visibleCards[nextIndex]?.focus();
+  }
+
+  function updateGalleryVisibility() {
+    const term = (searchInput.value || '').trim().toLowerCase();
+    const theme = filterSelect.value;
+    let visible = 0;
+    placeholders.forEach(slot => {
+      const matchesSearch = slot.dataset.search.includes(term);
+      const matchesTheme = theme === 'all' || slot.dataset.theme === theme;
+      const show = matchesSearch && matchesTheme;
+      slot.classList.toggle('hidden-by-filter', !show);
+      if (show) visible++;
+    });
+    galleryStatus.textContent = `${visible} cards shown`;
+    galleryLoading.style.display = 'none';
+  }
+
+  function applyLanguage(lang) {
+    currentLanguage = lang;
+    const dict = translations[lang] || translations.en;
+    document.querySelectorAll('[data-i18n]').forEach(node => {
+      const key = node.dataset.i18n;
+      if (dict[key]) node.textContent = dict[key];
+    });
+    updateFinalizeButton();
+  }
+
+  searchInput.addEventListener('input', updateGalleryVisibility);
+  filterSelect.addEventListener('change', updateGalleryVisibility);
+  languageSelect.addEventListener('change', () => applyLanguage(languageSelect.value));
 
   dropzones.forEach(dropzone => {
     dropzone.addEventListener('dragover', (e) => {
@@ -429,5 +531,7 @@ Select Cards
   });
 
   updateFinalizeButton();
+  updateGalleryVisibility();
+  applyLanguage(languageSelect.value);
 </script>
 {% endblock %}
