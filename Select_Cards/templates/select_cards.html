@@ -40,29 +40,32 @@ Select Cards
             <select id="language-select" class="form-select form-select-sm" aria-label="Language selector">
               <option value="en">EN</option>
               <option value="nl">NL</option>
+              <option value="ro">RO</option>
             </select>
             <small class="text-muted d-lg-none mobile-hint" data-i18n="mobileHint">Tap a card to add it above</small>
           </div>
         </div>
         <div class="gallery-toolbar" role="region" aria-label="Search and filter cards">
           <label for="search-input" class="visually-hidden">Search cards</label>
-          <input id="search-input" type="search" class="form-control" placeholder="Search by card number or theme">
+          <input id="search-input" type="search" class="form-control" placeholder="Search by card number or label" data-i18n-placeholder="searchPlaceholder">
           <label for="filter-select" class="visually-hidden">Filter theme</label>
-          <select id="filter-select" class="form-select" aria-label="Filter by theme">
-            <option value="all">All themes</option>
-            <option value="animals">Animals</option>
-            <option value="nature">Nature</option>
-            <option value="people">People</option>
-            <option value="abstract">Abstract</option>
+          <select id="filter-select" class="form-select" aria-label="Filter by label">
+            <option value="all" data-i18n="allLabels">All labels</option>
+            {% for label in theme_labels %}
+            <option value="{{ loop.index }}">{{ label }}</option>
+            {% endfor %}
           </select>
-          <div id="gallery-status" class="small text-muted" aria-live="polite">{{ images|length }} cards available</div>
+          <div id="gallery-status" class="small text-muted" aria-live="polite">{{ images|length }} cards shown</div>
         </div>
         <div class="card-wrapper" role="grid" aria-label="Available image cards">
           {% for image in images %}
-          <div id="slot-{{ image.id }}" class="placeholder empty" data-theme="{{ image.theme }}" data-search="{{ image.id }} {{ image.theme }}" role="gridcell">
+          <div id="slot-{{ image.id }}" class="placeholder empty"
+            data-label-ids=",{{ image.label_ids|join(',') }},"
+            data-search="{{ image.id }} {% for label_id in image.label_ids %}{{ theme_labels[label_id - 1]|lower }} {% endfor %}"
+            role="gridcell">
             <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
-              data-large="{{ url_for('static', filename=image.large) }}" aria-label="Card {{ image.id }} ({{ image.theme }})" tabindex="0">
-              <img src="{{ url_for('static', filename=image.small) }}" class="small" loading="lazy" alt="Card {{ image.id }} - {{ image.theme }}">
+              data-large="{{ url_for('static', filename=image.large) }}" aria-label="Card {{ image.id }}" tabindex="0">
+              <img src="{{ url_for('static', filename=image.small) }}" class="small" loading="lazy" alt="Card {{ image.id }}">
             </div>
           </div>
           {% endfor %}
@@ -106,12 +109,20 @@ Select Cards
     en: {
       selectionHeading: 'Your selection', selectionHint: 'Tap to add, drag to reorder, and keep scrolling the grid.',
       finalize: 'Finalize Selection', limitHint: 'Up to 6 cards', nextStep: 'Next step: after finalizing, you will see an overview to review or share your selected cards.',
-      availableImages: 'Available Images', mobileHint: 'Tap a card to add it above'
+      availableImages: 'Available Images', mobileHint: 'Tap a card to add it above',
+      allLabels: 'All labels', searchPlaceholder: 'Search by card number or label', selectedSuffix: 'selected', cardsShown: 'cards shown'
     },
     nl: {
       selectionHeading: 'Jouw selectie', selectionHint: 'Tik om toe te voegen, sleep om te herschikken en blijf door het raster scrollen.',
       finalize: 'Selectie afronden', limitHint: 'Maximaal 6 kaarten', nextStep: 'Volgende stap: na het afronden zie je een overzicht om je kaarten te controleren of te delen.',
-      availableImages: 'Beschikbare afbeeldingen', mobileHint: 'Tik op een kaart om die hierboven toe te voegen'
+      availableImages: 'Beschikbare afbeeldingen', mobileHint: 'Tik op een kaart om die hierboven toe te voegen',
+      allLabels: 'Alle labels', searchPlaceholder: 'Zoek op kaartnummer of label', selectedSuffix: 'geselecteerd', cardsShown: 'kaarten getoond'
+    },
+    ro: {
+      selectionHeading: 'Selecția ta', selectionHint: 'Atinge pentru a adăuga, trage pentru a reordona și continuă să derulezi grila.',
+      finalize: 'Finalizează selecția', limitHint: 'Până la 6 cărți', nextStep: 'Pasul următor: după finalizare vei vedea o prezentare pentru a revizui sau partaja cărțile selectate.',
+      availableImages: 'Imagini disponibile', mobileHint: 'Atinge o carte pentru a o adăuga mai sus',
+      allLabels: 'Toate etichetele', searchPlaceholder: 'Caută după numărul cărții sau etichetă', selectedSuffix: 'selectate', cardsShown: 'cărți afișate'
     }
   };
 
@@ -131,7 +142,8 @@ Select Cards
 
   function updateSelectionCount() {
     if (selectionCount) {
-      selectionCount.textContent = `${selectedCardsCount}/${maxCards} selected`;
+      const selectedSuffix = (translations[currentLanguage] && translations[currentLanguage].selectedSuffix) || 'selected';
+      selectionCount.textContent = `${selectedCardsCount}/${maxCards} ${selectedSuffix}`;
       selectionCount.classList.toggle('text-bg-primary', selectedCardsCount > 0);
       selectionCount.classList.toggle('text-bg-light', selectedCardsCount === 0);
     }
@@ -425,12 +437,14 @@ Select Cards
     let visible = 0;
     placeholders.forEach(slot => {
       const matchesSearch = slot.dataset.search.includes(term);
-      const matchesTheme = theme === 'all' || slot.dataset.theme === theme;
+      const labelToken = `,${theme},`;
+      const matchesTheme = theme === 'all' || (slot.dataset.labelIds || '').includes(labelToken);
       const show = matchesSearch && matchesTheme;
       slot.classList.toggle('hidden-by-filter', !show);
       if (show) visible++;
     });
-    galleryStatus.textContent = `${visible} cards shown`;
+    const cardsShown = (translations[currentLanguage] && translations[currentLanguage].cardsShown) || 'cards shown';
+    galleryStatus.textContent = `${visible} ${cardsShown}`;
     galleryLoading.style.display = 'none';
   }
 
@@ -440,6 +454,10 @@ Select Cards
     document.querySelectorAll('[data-i18n]').forEach(node => {
       const key = node.dataset.i18n;
       if (dict[key]) node.textContent = dict[key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(node => {
+      const key = node.dataset.i18nPlaceholder;
+      if (dict[key]) node.placeholder = dict[key];
     });
     updateFinalizeButton();
   }

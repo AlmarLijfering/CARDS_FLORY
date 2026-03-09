@@ -6,9 +6,17 @@
 <div class="container no-hover">
   <div class="row mb-3">
     <div class="col-12 text-center">
-      <h5>Overview of Selected Cards</h5>
-      <button id="back-btn" class="btn btn-secondary">New Selection</button>
-      <button id="print-btn" class="btn btn-primary">Print to PDF</button>
+      <div class="d-flex justify-content-end mb-2">
+        <label for="language-select" class="visually-hidden">Language</label>
+        <select id="language-select" class="form-select form-select-sm w-auto" aria-label="Language selector">
+          <option value="en">EN</option>
+          <option value="nl">NL</option>
+          <option value="ro">RO</option>
+        </select>
+      </div>
+      <h5 data-i18n="overviewHeading">Overview of Selected Cards</h5>
+      <button id="back-btn" class="btn btn-secondary" data-i18n="newSelection">New Selection</button>
+      <button id="print-btn" class="btn btn-primary" data-i18n="printPdf">Print to PDF</button>
     </div>
   </div>
 
@@ -32,11 +40,43 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 
 <script>
+  const languageSelect = document.getElementById('language-select');
+  let currentLanguage = 'en';
+  const translations = {
+    en: {
+      overviewHeading: 'Overview of Selected Cards', newSelection: 'New Selection', printPdf: 'Print to PDF',
+      noCardsSelected: 'No cards selected.', pageLabel: 'Page', pdfName: 'selected_cards.pdf'
+    },
+    nl: {
+      overviewHeading: 'Overzicht van geselecteerde kaarten', newSelection: 'Nieuwe selectie', printPdf: 'Afdrukken naar pdf',
+      noCardsSelected: 'Geen kaarten geselecteerd.', pageLabel: 'Pagina', pdfName: 'geselecteerde_kaarten.pdf'
+    },
+    ro: {
+      overviewHeading: 'Prezentare generală a cărților selectate', newSelection: 'Selecție nouă', printPdf: 'Tipărește în PDF',
+      noCardsSelected: 'Nu există cărți selectate.', pageLabel: 'Pagina', pdfName: 'carti_selectate.pdf'
+    }
+  };
+
+  function t(key) {
+    const dict = translations[currentLanguage] || translations.en;
+    return dict[key] || translations.en[key] || key;
+  }
+
+  function applyLanguage(lang) {
+    currentLanguage = lang;
+    const dict = translations[lang] || translations.en;
+    document.querySelectorAll('[data-i18n]').forEach(node => {
+      const key = node.dataset.i18n;
+      if (dict[key]) node.textContent = dict[key];
+    });
+  }
+
+  languageSelect.addEventListener('change', () => applyLanguage(languageSelect.value));
+
   document.getElementById('back-btn').addEventListener('click', () => {
     window.location.href = "{{ url_for('select_cards') }}";
   });
 
-  // Load an image URL into an Image() object (not the DOM <img>) for consistent rendering
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const im = new Image();
@@ -47,24 +87,20 @@
     });
   }
 
-  // Render image onto a square canvas without distortion.
-  // mode: "contain" (no crop, may add padding) or "cover" (fills square, may crop)
   function imageToSquareDataURL(imageObj, sizePx = 1024, mode = "contain", background = "#FFFFFF") {
     const canvas = document.createElement('canvas');
     canvas.width = sizePx;
     canvas.height = sizePx;
     const ctx = canvas.getContext('2d');
 
-    // Fill background (helps with transparent PNGs)
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, sizePx, sizePx);
 
     const iw = imageObj.naturalWidth || imageObj.width;
     const ih = imageObj.naturalHeight || imageObj.height;
 
-    // scale calculations
     const scaleContain = Math.min(sizePx / iw, sizePx / ih);
-    const scaleCover   = Math.max(sizePx / iw, sizePx / ih);
+    const scaleCover = Math.max(sizePx / iw, sizePx / ih);
     const scale = (mode === "cover") ? scaleCover : scaleContain;
 
     const dw = Math.round(iw * scale);
@@ -82,26 +118,23 @@
   document.getElementById('print-btn').addEventListener('click', async () => {
     const { jsPDF } = window.jspdf;
 
-    // A4 portrait, mm
     const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
 
-    // Grab src URLs from the DOM images
     const domImgs = Array.from(document.querySelectorAll('#card-container .card img'));
     const srcs = domImgs.map(i => i.currentSrc || i.src).filter(Boolean);
 
     if (srcs.length === 0) {
-      alert("No cards selected.");
+      alert(t('noCardsSelected'));
       return;
     }
 
-    // --- Page/grid settings ---
     const cols = 2;
     const rows = 3;
     const perPage = cols * rows;
 
-    const margin = 10; // mm
-    const gap = 6;     // mm
-    const top = 18;    // mm for title
+    const margin = 10;
+    const gap = 6;
+    const top = 18;
 
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
@@ -112,17 +145,13 @@
 
     const drawHeader = (pageIndex) => {
       doc.setFontSize(14);
-      doc.text("Overview of Selected Cards", margin, 12);
+      doc.text(t('overviewHeading'), margin, 12);
       doc.setFontSize(10);
-      doc.text(`Page ${pageIndex}`, pageW - margin, 12, { align: "right" });
+      doc.text(`${t('pageLabel')} ${pageIndex}`, pageW - margin, 12, { align: "right" });
     };
 
-    // Convert each image to a square PNG dataURL (no stretching)
-    // mode:
-    //  - "contain" keeps whole image (adds white padding if needed)
-    //  - "cover" fills the square (crops if needed)
     const mode = "contain";
-    const squarePx = 1024; // matches your source, keeps quality
+    const squarePx = 1024;
     const bg = "#FFFFFF";
 
     let pageIndex = 1;
@@ -142,15 +171,14 @@
       const x = margin + c * (sideMm + gap);
       const y = top + r * (sideMm + gap);
 
-      // Load image, render to square, then add to PDF
       const imgObj = await loadImage(srcs[i]);
       const dataUrl = imageToSquareDataURL(imgObj, squarePx, mode, bg);
-
-      // Add the square image as a square in the PDF
       doc.addImage(dataUrl, 'PNG', x, y, sideMm, sideMm);
     }
 
-    doc.save('selected_cards.pdf');
+    doc.save(t('pdfName'));
   });
+
+  applyLanguage(languageSelect.value);
 </script>
 {% endblock %}
