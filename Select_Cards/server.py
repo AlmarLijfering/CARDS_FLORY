@@ -15,7 +15,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-me')
 
 MIN_CARD_ID = 1
-MAX_CARD_ID = 112
+MAX_CARD_ID = 102
 MAX_SELECTED_CARDS = 6
 
 
@@ -86,8 +86,14 @@ def logout():
 @app.route('/select-cards')
 @app.route('/select_card')
 def select_cards():
+    themes = ['animals', 'nature', 'people', 'abstract']
     images = [
-        {'id': i, 'small': f'Images/cards/cards_s{i:03d}.png', 'large': f'Images/cards/cards_l{i:03d}.png'}
+        {
+            'id': i,
+            'small': f'Images/cards/cards_s{i:03d}.png',
+            'large': f'Images/cards/cards_l{i:03d}.png',
+            'theme': themes[(i - 1) % len(themes)]
+        }
         for i in range(MIN_CARD_ID, MAX_CARD_ID + 1)
     ]
     return render_template('select_cards.html', images=images)
