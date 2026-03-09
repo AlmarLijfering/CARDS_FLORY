@@ -536,12 +536,34 @@ h5 {
 }
 
 .card-labels-table-wrapper {
-    max-height: 70vh;
+    overflow: hidden;
+}
+
+.label-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem 1rem;
+}
+
+.label-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.label-checkbox-item .form-check-input {
+    margin-top: 0;
+    flex: 0 0 auto;
+}
+
+.label-checkbox-item .form-check-label {
+    font-size: 0.9rem;
+    line-height: 1.2;
 }
 
 .card-label-preview {
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
     object-fit: cover;
     border: 1px solid #d6d6d6;
     border-radius: 6px;
