@@ -12,7 +12,7 @@
             <div>
               <span class="text-uppercase small fw-semibold text-muted">Configuration</span>
               <h1 class="h3 mb-1">Card labels</h1>
-              <p class="text-muted mb-0">Assign one or more labels (1-6) to each card. Duplicate labels per card are not allowed.</p>
+              <p class="text-muted mb-0">Assign one or more labels (1-6) to each card. Use search and filters to narrow the list before saving.</p>
             </div>
             <div class="d-flex gap-2">
               <a class="btn btn-outline-secondary" href="{{ url_for('landing_page') }}">Back</a>
@@ -45,9 +45,41 @@
             <button type="submit" class="btn btn-outline-primary">Import bundle</button>
           </form>
 
-          <form method="post">
+          <form method="post" id="card-labels-form">
+            <div class="card-labels-toolbar mb-3">
+              <div class="card-labels-toolbar-grid">
+                <div>
+                  <label for="card-search" class="form-label mb-1">Search cards</label>
+                  <input id="card-search" type="search" class="form-control" placeholder="Card number or label name">
+                </div>
+                <div>
+                  <label for="label-filter" class="form-label mb-1">Filter by label</label>
+                  <select id="label-filter" class="form-select">
+                    <option value="all">All labels</option>
+                    {% for label in theme_labels %}
+                    <option value="{{ loop.index }}">{{ loop.index }} - {{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label for="assignment-filter" class="form-label mb-1">Assignment state</label>
+                  <select id="assignment-filter" class="form-select">
+                    <option value="all">All cards</option>
+                    <option value="assigned">Assigned cards</option>
+                    <option value="unassigned">Unassigned cards</option>
+                  </select>
+                </div>
+              </div>
+              <div class="card-labels-toolbar-footer mt-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div id="card-filter-status" class="small text-muted" aria-live="polite">{{ cards|length }} cards visible</div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-save me-1"></i>Save assignments
+                </button>
+              </div>
+            </div>
+
             <div class="card-labels-table-wrapper">
-              <table class="table table-sm align-middle">
+              <table class="table table-sm align-middle card-labels-table">
                 <thead>
                   <tr>
                     <th>Card</th>
@@ -57,7 +89,13 @@
                 </thead>
                 <tbody>
                   {% for card in cards %}
-                  <tr>
+                  <tr
+                    data-card-row
+                    data-card-id="{{ card.id }}"
+                    data-search="{{ card.search_text }}"
+                    data-label-ids=",{{ card.assigned_labels|join(',') }},"
+                    data-assigned="{{ 'true' if card.assigned_labels else 'false' }}"
+                  >
                     <td class="fw-semibold">#{{ card.id }}</td>
                     <td>
                       <img class="card-label-preview" src="{{ url_for('static', filename=card.small) }}" alt="Card {{ card.id }}">
@@ -84,13 +122,18 @@
               </table>
             </div>
 
-            <button type="submit" class="btn btn-primary mt-2">
-              <i class="bi bi-save me-1"></i>Save assignments
-            </button>
+            <div class="card-labels-sticky-actions mt-3 d-flex justify-content-between align-items-center gap-2">
+              <span class="small text-muted">Filtered changes stay in the form even when rows are hidden.</span>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Save assignments
+              </button>
+            </div>
           </form>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script src="{{ url_for('static', filename='JS/card_labels.js') }}"></script>
 {% endblock %}
