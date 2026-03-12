@@ -52,7 +52,12 @@ Select Cards
           <select id="filter-select" class="form-select" aria-label="Filter by label">
             <option value="all" data-i18n="allLabels">All labels</option>
             {% for label in theme_labels %}
-            <option value="{{ loop.index }}">{{ label }}</option>
+            <option
+              value="{{ loop.index }}"
+              data-label-en="{{ theme_labels_by_language['en'][loop.index0] }}"
+              data-label-nl="{{ theme_labels_by_language['nl'][loop.index0] }}"
+              data-label-ro="{{ theme_labels_by_language['ro'][loop.index0] }}"
+            >{{ label }}</option>
             {% endfor %}
           </select>
           <div id="gallery-status" class="small text-muted" aria-live="polite">{{ images|length }} cards shown</div>
@@ -61,7 +66,7 @@ Select Cards
           {% for image in images %}
           <div id="slot-{{ image.id }}" class="placeholder empty"
             data-label-ids=",{{ image.label_ids|join(',') }},"
-            data-search="{{ image.id }} {% for label_id in image.label_ids %}{{ theme_labels[label_id - 1]|lower }} {% endfor %}"
+            data-search="{{ image.search_text }}"
             role="gridcell">
             <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
               data-large="{{ url_for('static', filename=image.large) }}" aria-label="Card {{ image.id }}" tabindex="0">
@@ -80,6 +85,7 @@ Select Cards
   window.selectCardsConfig = {{ {
     'currentLanguage': current_language,
     'maxCards': 6,
+    'supportedLanguages': theme_labels_by_language.keys() | list,
     'routes': {
       'finalize': url_for('finalize'),
       'overview': url_for('overview_cards'),

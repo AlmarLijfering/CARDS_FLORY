@@ -29,6 +29,14 @@ class ServerRoutesTestCase(unittest.TestCase):
             connection.close()
         return [json.loads(row[0]) for row in rows]
 
+    def multilingual_theme_payload(self):
+        payload = {}
+        for index in range(1, 7):
+            payload[f'label_{index}_en'] = f'English {index}'
+            payload[f'label_{index}_nl'] = f'Dutch {index}'
+            payload[f'label_{index}_ro'] = f'Romanian {index}'
+        return payload
+
     def test_root_renders_landing_page(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
@@ -40,21 +48,28 @@ class ServerRoutesTestCase(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertIn('Your selection', body)
         self.assertIn('select_cards.js', body)
+        self.assertIn('data-label-en=', body)
+        self.assertIn('data-label-nl=', body)
+        self.assertIn('data-label-ro=', body)
 
     def test_themes_page_renders(self):
         response = self.client.get('/themes')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Theme labels', response.get_data(as_text=True))
+        body = response.get_data(as_text=True)
+        self.assertIn('Theme labels', body)
+        self.assertIn('label_1_en', body)
+        self.assertIn('label_1_nl', body)
+        self.assertIn('label_1_ro', body)
 
     def test_themes_page_saves_labels_to_server_side_state(self):
-        payload = {f'label_{index}': f'My label {index}' for index in range(1, 7)}
-        response = self.client.post('/themes', data=payload)
+        response = self.client.post('/themes', data=self.multilingual_theme_payload())
         self.assertEqual(response.status_code, 302)
 
         stored = self.read_stored_payloads()
         self.assertEqual(len(stored), 1)
-        self.assertEqual(stored[0]['theme_labels'][0], 'My label 1')
-        self.assertEqual(len(stored[0]['theme_labels']), 6)
+        self.assertEqual(stored[0]['theme_labels']['en'][0], 'English 1')
+        self.assertEqual(stored[0]['theme_labels']['nl'][0], 'Dutch 1')
+        self.assertEqual(stored[0]['theme_labels']['ro'][0], 'Romanian 1')
 
     def test_card_labels_page_renders(self):
         response = self.client.get('/card-labels')
@@ -62,6 +77,14 @@ class ServerRoutesTestCase(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertIn('Card labels', body)
         self.assertIn('card_labels.js', body)
+
+    def test_card_labels_page_stays_english(self):
+        self.client.post('/themes', data=self.multilingual_theme_payload())
+        response = self.client.get('/card-labels')
+        body = response.get_data(as_text=True)
+        self.assertIn('1 - English 1', body)
+        self.assertNotIn('1 - Dutch 1', body)
+        self.assertNotIn('1 - Romanian 1', body)
 
     def test_card_labels_page_saves_unique_labels(self):
         response = self.client.post('/card-labels', data={
@@ -149,20 +172,26 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertIn('"nl"', response.get_data(as_text=True))
         self.assertIn('overview_cards.js', response.get_data(as_text=True))
 
-    def test_export_labels_bundle_includes_theme_and_assignments(self):
-        self.client.post('/themes', data={f'label_{index}': f'Label {index}' for index in range(1, 7)})
+    def test_export_labels_bundle_includes_multilingual_theme_labels_and_assignments(self):
+        self.client.post('/themes', data=self.multilingual_theme_payload())
         self.client.post('/card-labels', data={'card_1_labels': ['1', '2'], 'card_2_labels': ['6']})
         response = self.client.get('/card-labels/export')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, 'application/json')
         payload = response.get_json()
-        self.assertEqual(len(payload['theme_labels']), 6)
+        self.assertEqual(len(payload['theme_labels']['en']), 6)
+        self.assertEqual(payload['theme_labels']['nl'][0], 'Dutch 1')
         self.assertEqual(payload['card_labels']['1'], [1, 2])
 
     def test_import_labels_bundle_sets_theme_and_assignments(self):
         bundle = io.BytesIO(
-            b'{"theme_labels": ["A", "B", "C", "D", "E", "F"], "card_labels": {"5": [1, 4], "7": [3]}}'
+            (
+                b'{"theme_labels": {"en": ["A", "B", "C", "D", "E", "F"], '
+                b'"nl": ["NA", "NB", "NC", "ND", "NE", "NF"], '
+                b'"ro": ["RA", "RB", "RC", "RD", "RE", "RF"]}, '
+                b'"card_labels": {"5": [1, 4], "7": [3]}}'
+            )
         )
         response = self.client.post(
             '/card-labels/import',
@@ -172,7 +201,8 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
 
         stored = self.read_stored_payloads()
-        self.assertEqual(stored[0]['theme_labels'][0], 'A')
+        self.assertEqual(stored[0]['theme_labels']['en'][0], 'A')
+        self.assertEqual(stored[0]['theme_labels']['nl'][0], 'NA')
         self.assertEqual(stored[0]['card_labels']['5'], [1, 4])
 
     def test_card_labels_screen_has_filter_controls(self):

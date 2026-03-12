@@ -120,6 +120,30 @@
     updateSelectionCount();
   }
 
+  function updateFilterOptionLabels() {
+    if (!filterSelect) {
+      return;
+    }
+
+    const labelKeyByLanguage = {
+      en: 'labelEn',
+      nl: 'labelNl',
+      ro: 'labelRo'
+    };
+
+    Array.from(filterSelect.options).forEach((option) => {
+      if (option.value === 'all') {
+        option.textContent = t('allLabels');
+        return;
+      }
+
+      const localizedLabel = option.dataset[labelKeyByLanguage[currentLanguage]]
+        || option.dataset.labelEn
+        || option.textContent;
+      option.textContent = localizedLabel;
+    });
+  }
+
   function createSelectedCard(sourceElement, dropzone) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -148,6 +172,7 @@
       card.remove();
       selectedCardsCount = Math.max(selectedCardsCount - 1, 0);
       updateFinalizeButton();
+      updateGalleryVisibility();
     });
     card.appendChild(removeBtn);
 
@@ -194,6 +219,7 @@
 
     selectedCardsCount += 1;
     updateFinalizeButton();
+    updateGalleryVisibility();
     return true;
   }
 
@@ -390,6 +416,7 @@
     card.addEventListener('dragend', handleDragEnd);
     card.addEventListener('mouseenter', () => applyInwardZoomClass(card));
     card.addEventListener('contextmenu', (event) => openCardContextMenu(event, card));
+    card.addEventListener('dblclick', () => handleCardSelection(card));
     card.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -409,13 +436,15 @@
   function updateGalleryVisibility() {
     const term = (searchInput?.value || '').trim().toLowerCase();
     const selectedLabel = filterSelect?.value || 'all';
+    const filtersActive = selectedLabel !== 'all' || term.length > 0;
     let visible = 0;
 
     placeholders.forEach((slot) => {
       const matchesSearch = (slot.dataset.search || '').includes(term);
       const labelToken = `,${selectedLabel},`;
       const matchesLabel = selectedLabel === 'all' || (slot.dataset.labelIds || '').includes(labelToken);
-      const show = matchesSearch && matchesLabel;
+      const hideSelectedSource = filtersActive && slot.classList.contains('selected');
+      const show = matchesSearch && matchesLabel && !hideSelectedSource;
       slot.classList.toggle('hidden-by-filter', !show);
       if (show) {
         visible += 1;
@@ -459,6 +488,7 @@
       }
     });
 
+    updateFilterOptionLabels();
     updateFinalizeButton();
     updateGalleryVisibility();
     persistLanguage(currentLanguage);

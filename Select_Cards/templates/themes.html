@@ -6,13 +6,13 @@
 <div class="landing-page py-5">
   <div class="container">
     <div class="row justify-content-center">
-      <div class="col-12 col-lg-8">
+      <div class="col-12 col-xl-10">
         <div class="landing-hero p-4 p-md-5">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
               <span class="text-uppercase small fw-semibold text-muted">Configuration</span>
               <h1 class="h3 mb-1">Theme labels</h1>
-              <p class="text-muted mb-0">Set the names for your 6 theme slots.</p>
+              <p class="text-muted mb-0">Set the names for your 6 theme slots in English, Dutch, and Romanian.</p>
             </div>
             <a class="btn btn-outline-secondary" href="{{ url_for('landing_page') }}">Back</a>
           </div>
@@ -24,19 +24,55 @@
           {% endif %}
 
           <form method="post" class="d-grid gap-3">
-            {% for index in range(1, 7) %}
-            <div>
-              <label for="label_{{ index }}" class="form-label">Label {{ index }}</label>
-              <input
-                id="label_{{ index }}"
-                name="label_{{ index }}"
-                type="text"
-                class="form-control"
-                maxlength="50"
-                value="{{ labels[index - 1] }}"
-              >
+            <div class="card-labels-table-wrapper">
+              <table class="table table-sm align-middle card-labels-table">
+                <thead>
+                  <tr>
+                    <th>Slot</th>
+                    <th>English</th>
+                    <th>Dutch</th>
+                    <th>Romanian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for index in range(1, 7) %}
+                  <tr>
+                    <td class="fw-semibold">Label {{ index }}</td>
+                    <td>
+                      <input
+                        id="label_{{ index }}_en"
+                        name="label_{{ index }}_en"
+                        type="text"
+                        class="form-control"
+                        maxlength="50"
+                        value="{{ labels_by_language['en'][index - 1] }}"
+                      >
+                    </td>
+                    <td>
+                      <input
+                        id="label_{{ index }}_nl"
+                        name="label_{{ index }}_nl"
+                        type="text"
+                        class="form-control"
+                        maxlength="50"
+                        value="{{ labels_by_language['nl'][index - 1] }}"
+                      >
+                    </td>
+                    <td>
+                      <input
+                        id="label_{{ index }}_ro"
+                        name="label_{{ index }}_ro"
+                        type="text"
+                        class="form-control"
+                        maxlength="50"
+                        value="{{ labels_by_language['ro'][index - 1] }}"
+                      >
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
             </div>
-            {% endfor %}
 
             <div class="d-flex gap-2 pt-2">
               <button type="submit" class="btn btn-primary">

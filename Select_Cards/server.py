@@ -27,13 +27,16 @@ MIN_CARD_ID = 1
 MAX_CARD_ID = 112
 MAX_SELECTED_CARDS = 6
 THEME_SLOT_COUNT = 6
-SUPPORTED_LANGUAGES = {'en', 'nl', 'ro'}
+SUPPORTED_LANGUAGES = ('en', 'nl', 'ro')
 STATE_COOKIE_NAME = 'cards_session_id'
 STATE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 
 
 def get_default_theme_labels():
-    return [f'Label {index}' for index in range(1, THEME_SLOT_COUNT + 1)]
+    return {
+        language: [f'Label {index}' for index in range(1, THEME_SLOT_COUNT + 1)]
+        for language in SUPPORTED_LANGUAGES
+    }
 
 
 def get_default_state():
@@ -44,6 +47,46 @@ def get_default_state():
         'card_labels': {},
         'language': 'en',
     }
+
+
+def normalize_theme_labels(raw_theme_labels):
+    defaults = get_default_theme_labels()
+
+    if isinstance(raw_theme_labels, list) and len(raw_theme_labels) == THEME_SLOT_COUNT:
+        # Backward-compatible migration from the older single-language payload.
+        normalized_english = []
+        for index, value in enumerate(raw_theme_labels, start=1):
+            text = value.strip() if isinstance(value, str) else ''
+            normalized_english.append(text or f'Label {index}')
+        return {
+            language: list(normalized_english)
+            for language in SUPPORTED_LANGUAGES
+        }
+
+    if not isinstance(raw_theme_labels, dict):
+        return defaults
+
+    normalized = {}
+    english_labels = None
+    for language in SUPPORTED_LANGUAGES:
+        values = raw_theme_labels.get(language)
+        if isinstance(values, list) and len(values) == THEME_SLOT_COUNT:
+            normalized_values = []
+            for index, value in enumerate(values, start=1):
+                text = value.strip() if isinstance(value, str) else ''
+                normalized_values.append(text or f'Label {index}')
+            normalized[language] = normalized_values
+            if language == 'en':
+                english_labels = list(normalized_values)
+        else:
+            normalized[language] = None
+
+    english_labels = english_labels or defaults['en']
+    for language in SUPPORTED_LANGUAGES:
+        if normalized[language] is None:
+            normalized[language] = list(english_labels)
+
+    return normalized
 
 
 def get_db():
@@ -83,13 +126,7 @@ def normalize_state(raw_state):
     validated_cards, _ = parse_selected_cards(selected_cards) if isinstance(selected_cards, list) else ([], None)
     state['selected_cards'] = validated_cards or []
 
-    theme_labels = raw_state.get('theme_labels')
-    if isinstance(theme_labels, list) and len(theme_labels) == THEME_SLOT_COUNT:
-        normalized_theme_labels = []
-        for index, value in enumerate(theme_labels, start=1):
-            text = value.strip() if isinstance(value, str) else ''
-            normalized_theme_labels.append(text or f'Label {index}')
-        state['theme_labels'] = normalized_theme_labels
+    state['theme_labels'] = normalize_theme_labels(raw_state.get('theme_labels'))
 
     card_labels = raw_state.get('card_labels')
     if isinstance(card_labels, dict):
@@ -250,16 +287,15 @@ def get_validated_session_cards(state=None):
     return [int(card_id) for card_id in validated_cards]
 
 
-def get_theme_labels(state=None):
+def get_theme_labels_map(state=None):
     current_state = state or get_state()
-    theme_labels = current_state.get('theme_labels')
-    if isinstance(theme_labels, list) and len(theme_labels) == THEME_SLOT_COUNT:
-        normalized = []
-        for index, value in enumerate(theme_labels, start=1):
-            text = value.strip() if isinstance(value, str) else ''
-            normalized.append(text or f'Label {index}')
-        return normalized
-    return get_default_theme_labels()
+    return normalize_theme_labels(current_state.get('theme_labels'))
+
+
+def get_theme_labels(state=None, language='en'):
+    theme_labels_map = get_theme_labels_map(state)
+    fallback_language = language if language in SUPPORTED_LANGUAGES else 'en'
+    return list(theme_labels_map.get(fallback_language) or theme_labels_map['en'])
 
 
 def get_validated_card_labels(state=None):
@@ -289,13 +325,12 @@ def normalize_import_payload(data):
         return None, 'Import payload must be a JSON object'
 
     raw_theme_labels = data.get('theme_labels')
-    if not isinstance(raw_theme_labels, list) or len(raw_theme_labels) != THEME_SLOT_COUNT:
-        return None, f'theme_labels must be a list with {THEME_SLOT_COUNT} entries'
-
-    normalized_theme_labels = []
-    for index, value in enumerate(raw_theme_labels, start=1):
-        text = value.strip() if isinstance(value, str) else ''
-        normalized_theme_labels.append(text or f'Label {index}')
+    normalized_theme_labels = normalize_theme_labels(raw_theme_labels)
+    if not raw_theme_labels or any(len(labels) != THEME_SLOT_COUNT for labels in normalized_theme_labels.values()):
+        return None, (
+            f'theme_labels must be either a list with {THEME_SLOT_COUNT} entries '
+            'or an object with en/nl/ro lists'
+        )
 
     raw_assignments = data.get('card_labels')
     if not isinstance(raw_assignments, dict):
@@ -332,7 +367,9 @@ def logout():
 @app.route('/select-cards')
 @app.route('/select_card')
 def select_cards():
-    theme_labels = get_theme_labels()
+    current_language = get_validated_language()
+    theme_labels = get_theme_labels(language=current_language)
+    theme_labels_by_language = get_theme_labels_map()
     card_assignments = get_validated_card_labels()
     images = [
         {
@@ -340,6 +377,18 @@ def select_cards():
             'small': f'Images/cards/cards_s{i:03d}.png',
             'large': f'Images/cards/cards_l{i:03d}.png',
             'label_ids': card_assignments.get(str(i), []),
+            'search_text': ' '.join(
+                dict.fromkeys(
+                    [
+                        str(i),
+                        *[
+                            theme_labels_by_language[language][label_id - 1].lower()
+                            for label_id in card_assignments.get(str(i), [])
+                            for language in SUPPORTED_LANGUAGES
+                        ],
+                    ]
+                )
+            ),
         }
         for i in range(MIN_CARD_ID, MAX_CARD_ID + 1)
     ]
@@ -347,7 +396,8 @@ def select_cards():
         'select_cards.html',
         images=images,
         theme_labels=theme_labels,
-        current_language=get_validated_language(),
+        theme_labels_by_language=theme_labels_by_language,
+        current_language=current_language,
     )
 
 
@@ -355,17 +405,19 @@ def select_cards():
 def themes_page():
     state = get_state()
     if request.method == 'POST':
-        labels = []
-        for index in range(1, THEME_SLOT_COUNT + 1):
-            field = f'label_{index}'
-            labels.append(request.form.get(field, '').strip() or f'Label {index}')
+        labels = {}
+        for language in SUPPORTED_LANGUAGES:
+            labels[language] = []
+            for index in range(1, THEME_SLOT_COUNT + 1):
+                field = f'label_{index}_{language}'
+                labels[language].append(request.form.get(field, '').strip() or f'Label {index}')
         state['theme_labels'] = labels
         mark_state_dirty()
         return redirect(url_for('themes_page', saved='1'))
 
     return render_template(
         'themes.html',
-        labels=get_theme_labels(state),
+        labels_by_language=get_theme_labels_map(state),
         saved=request.args.get('saved') == '1'
     )
 
@@ -399,7 +451,7 @@ def card_labels_page():
         mark_state_dirty()
         return redirect(url_for('card_labels_page', saved='1'))
 
-    theme_labels = get_theme_labels(state)
+    theme_labels = get_theme_labels(state, language='en')
     card_assignments = get_validated_card_labels(state)
     cards = []
     for card_id in range(MIN_CARD_ID, MAX_CARD_ID + 1):
@@ -422,7 +474,7 @@ def card_labels_page():
 @app.route('/card-labels/export', methods=['GET'])
 def export_card_labels():
     payload = {
-        'theme_labels': get_theme_labels(),
+        'theme_labels': get_theme_labels_map(),
         'card_labels': get_validated_card_labels(),
     }
     return Response(
