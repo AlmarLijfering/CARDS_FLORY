@@ -14,7 +14,7 @@
               <h1 class="h3 mb-1">Theme labels</h1>
               <p class="text-muted mb-0">Set the names for your 6 theme slots in English, Dutch, and Romanian.</p>
             </div>
-            <a class="btn btn-outline-secondary" href="{{ url_for('landing_page') }}">Back</a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('configuration_page') }}">Back</a>
           </div>
 
           {% if saved %}
@@ -24,19 +24,6 @@
           {% endif %}
 
           <form method="post" class="d-grid gap-3">
-            <div class="form-check form-switch">
-              <input
-                id="select_cards_blocked"
-                name="select_cards_blocked"
-                type="checkbox"
-                class="form-check-input"
-                {% if select_cards_blocked %}checked{% endif %}
-              >
-              <label class="form-check-label" for="select_cards_blocked">
-                Block Select Cards app, including direct URL access
-              </label>
-            </div>
-
             <div class="card-labels-table-wrapper">
               <table class="table table-sm align-middle card-labels-table">
                 <thead>

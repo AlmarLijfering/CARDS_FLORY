@@ -40,7 +40,18 @@ class ServerRoutesTestCase(unittest.TestCase):
     def test_root_renders_landing_page(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('Choose an application', response.get_data(as_text=True))
+        body = response.get_data(as_text=True)
+        self.assertIn('Choose an application', body)
+        self.assertIn('Configuration', body)
+
+    def test_configuration_page_renders(self):
+        response = self.client.get('/configuration')
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('Manage labels and access', body)
+        self.assertIn('select_cards_blocked', body)
+        self.assertIn('Theme Labels', body)
+        self.assertIn('Card Labels', body)
 
     def test_select_cards_route_renders_cards_page(self):
         self.client.post('/card-labels', data={
@@ -64,7 +75,6 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn('Theme labels', body)
-        self.assertIn('select_cards_blocked', body)
         self.assertIn('label_1_en', body)
         self.assertIn('label_1_nl', body)
         self.assertIn('label_1_ro', body)
@@ -80,10 +90,10 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(stored[0]['theme_labels']['ro'][0], 'Romanian 1')
         self.assertFalse(stored[0]['select_cards_blocked'])
 
-    def test_themes_page_can_block_select_cards(self):
+    def test_configuration_page_can_block_select_cards(self):
         payload = self.multilingual_theme_payload()
-        payload['select_cards_blocked'] = 'on'
-        response = self.client.post('/themes', data=payload)
+        self.client.post('/themes', data=payload)
+        response = self.client.post('/configuration', data={'select_cards_blocked': 'on'})
         self.assertEqual(response.status_code, 302)
 
         stored = self.read_stored_payloads()
@@ -158,8 +168,8 @@ class ServerRoutesTestCase(unittest.TestCase):
 
     def test_select_cards_route_respects_block_setting(self):
         payload = self.multilingual_theme_payload()
-        payload['select_cards_blocked'] = 'on'
         self.client.post('/themes', data=payload)
+        self.client.post('/configuration', data={'select_cards_blocked': 'on'})
 
         response = self.client.get('/select-cards')
         self.assertEqual(response.status_code, 403)
@@ -167,8 +177,8 @@ class ServerRoutesTestCase(unittest.TestCase):
 
     def test_finalize_rejects_when_select_cards_is_blocked(self):
         payload = self.multilingual_theme_payload()
-        payload['select_cards_blocked'] = 'on'
         self.client.post('/themes', data=payload)
+        self.client.post('/configuration', data={'select_cards_blocked': 'on'})
 
         response = self.client.post('/finalize', json={'selectedCards': ['1', '2']})
         self.assertEqual(response.status_code, 403)

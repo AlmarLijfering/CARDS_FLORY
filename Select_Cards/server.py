@@ -359,6 +359,21 @@ def landing_page():
     )
 
 
+@app.route('/configuration', methods=['GET', 'POST'])
+def configuration_page():
+    state = get_state()
+    if request.method == 'POST':
+        state['select_cards_blocked'] = request.form.get('select_cards_blocked') == 'on'
+        mark_state_dirty()
+        return redirect(url_for('configuration_page', saved='1'))
+
+    return render_template(
+        'configuration.html',
+        select_cards_blocked=is_select_cards_blocked(state),
+        saved=request.args.get('saved') == '1',
+    )
+
+
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username', '').strip()
@@ -456,14 +471,12 @@ def themes_page():
                 field = f'label_{index}_{language}'
                 labels[language].append(request.form.get(field, '').strip() or f'Label {index}')
         state['theme_labels'] = labels
-        state['select_cards_blocked'] = request.form.get('select_cards_blocked') == 'on'
         mark_state_dirty()
         return redirect(url_for('themes_page', saved='1'))
 
     return render_template(
         'themes.html',
         labels_by_language=get_theme_labels_map(state),
-        select_cards_blocked=is_select_cards_blocked(state),
         saved=request.args.get('saved') == '1'
     )
 

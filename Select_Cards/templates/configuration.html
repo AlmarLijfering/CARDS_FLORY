@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+
+{% block title %}Configuration{% endblock %}
+
+{% block content %}
+<div class="landing-page py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-xl-10">
+        <div class="landing-hero p-4 p-md-5">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <span class="text-uppercase small fw-semibold text-muted">Configuration</span>
+              <h1 class="h3 mb-1">Configuration</h1>
+              <p class="text-muted mb-0">Manage labels and access for the Select Cards application.</p>
+            </div>
+            <a class="btn btn-outline-secondary" href="{{ url_for('landing_page') }}">Back</a>
+          </div>
+
+          {% if saved %}
+          <div class="alert alert-success" role="alert">
+            Configuration saved.
+          </div>
+          {% endif %}
+
+          <form method="post" class="mb-4">
+            <div class="form-check form-switch">
+              <input
+                id="select_cards_blocked"
+                name="select_cards_blocked"
+                type="checkbox"
+                class="form-check-input"
+                {% if select_cards_blocked %}checked{% endif %}
+              >
+              <label class="form-check-label" for="select_cards_blocked">
+                Block Select Cards app, including direct URL access
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">
+              <i class="bi bi-save me-1"></i>Save configuration
+            </button>
+          </form>
+
+          <div class="app-grid">
+            <a class="app-tile text-decoration-none" href="{{ url_for('themes_page') }}" aria-label="Open Theme Labels configuration">
+              <div class="tile-icon" aria-hidden="true"><i class="bi bi-palette"></i></div>
+              <h2 class="h5 mb-1">Theme Labels</h2>
+              <p class="small text-muted mb-0">Create and save 6 labels for themes in English, Dutch, and Romanian.</p>
+            </a>
+
+            <a class="app-tile text-decoration-none" href="{{ url_for('card_labels_page') }}" aria-label="Open Card Labels configuration">
+              <div class="tile-icon" aria-hidden="true"><i class="bi bi-tags"></i></div>
+              <h2 class="h5 mb-1">Card Labels</h2>
+              <p class="small text-muted mb-0">Assign labels to cards and manage import or export bundles.</p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
