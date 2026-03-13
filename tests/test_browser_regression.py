@@ -94,7 +94,7 @@ class BrowserRegressionTestCase(unittest.TestCase):
         finally:
             connection.close()
 
-    def prepare_stateful_session(self):
+    def prepare_stateful_session(self, card_label_data=None):
         session = requests.Session()
         theme_payload = {}
         for index in range(1, 7):
@@ -105,15 +105,12 @@ class BrowserRegressionTestCase(unittest.TestCase):
         response = session.post(f'{self.base_url}/themes', data=theme_payload, allow_redirects=False)
         self.assertEqual(response.status_code, 302)
 
-        response = session.post(
-            f'{self.base_url}/card-labels',
-            data={
-                'card_1_labels': ['1'],
-                'card_2_labels': ['1'],
-                'card_3_labels': ['2'],
-            },
-            allow_redirects=False,
-        )
+        assignments = card_label_data or {
+            'card_1_labels': ['1'],
+            'card_2_labels': ['1'],
+            'card_3_labels': ['2'],
+        }
+        response = session.post(f'{self.base_url}/card-labels', data=assignments, allow_redirects=False)
         self.assertEqual(response.status_code, 302)
         return session
 
@@ -210,6 +207,41 @@ class BrowserRegressionTestCase(unittest.TestCase):
             self.assertEqual(len(image_sources), 2)
             self.assertTrue(image_sources[0].endswith('cards_l002.png'))
             self.assertTrue(image_sources[1].endswith('cards_l001.png'))
+
+            browser.close()
+
+    def test_filtered_hover_uses_inward_origin_for_right_and_bottom_edges(self):
+        seeded_session = self.prepare_stateful_session({
+            'card_1_labels': ['1'],
+            'card_2_labels': ['1'],
+            'card_3_labels': ['1'],
+            'card_4_labels': ['1'],
+        })
+
+        with sync_playwright() as playwright:
+            browser, context = self.new_browser_context_with_session(playwright, seeded_session)
+            page = context.new_page()
+            page.set_viewport_size({'width': 1280, 'height': 900})
+            page.goto(f'{self.base_url}/select-cards', wait_until='networkidle')
+
+            page.evaluate(
+                """
+                () => {
+                  const wrapper = document.querySelector('.card-wrapper');
+                  wrapper.style.maxWidth = '264px';
+                  wrapper.style.margin = '0 auto';
+                }
+                """
+            )
+            page.select_option('#filter-select', '1')
+            page.wait_for_timeout(150)
+            page.hover('#card-4')
+
+            self.assertTrue(
+                page.locator('#card-4').evaluate(
+                    "node => node.classList.contains('zoom-inward-bottom-right')"
+                )
+            )
 
             browser.close()
 

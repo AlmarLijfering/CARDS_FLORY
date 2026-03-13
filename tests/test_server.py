@@ -43,6 +43,10 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertIn('Choose an application', response.get_data(as_text=True))
 
     def test_select_cards_route_renders_cards_page(self):
+        self.client.post('/card-labels', data={
+            'card_1_labels': ['1'],
+            'card_3_labels': ['3'],
+        })
         response = self.client.get('/select-cards')
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
@@ -51,12 +55,16 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertIn('data-label-en=', body)
         self.assertIn('data-label-nl=', body)
         self.assertIn('data-label-ro=', body)
+        self.assertIn('value="1"', body)
+        self.assertIn('value="3"', body)
+        self.assertNotIn('value="2"', body)
 
     def test_themes_page_renders(self):
         response = self.client.get('/themes')
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn('Theme labels', body)
+        self.assertIn('select_cards_blocked', body)
         self.assertIn('label_1_en', body)
         self.assertIn('label_1_nl', body)
         self.assertIn('label_1_ro', body)
@@ -70,6 +78,16 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(stored[0]['theme_labels']['en'][0], 'English 1')
         self.assertEqual(stored[0]['theme_labels']['nl'][0], 'Dutch 1')
         self.assertEqual(stored[0]['theme_labels']['ro'][0], 'Romanian 1')
+        self.assertFalse(stored[0]['select_cards_blocked'])
+
+    def test_themes_page_can_block_select_cards(self):
+        payload = self.multilingual_theme_payload()
+        payload['select_cards_blocked'] = 'on'
+        response = self.client.post('/themes', data=payload)
+        self.assertEqual(response.status_code, 302)
+
+        stored = self.read_stored_payloads()
+        self.assertTrue(stored[0]['select_cards_blocked'])
 
     def test_card_labels_page_renders(self):
         response = self.client.get('/card-labels')
@@ -137,6 +155,24 @@ class ServerRoutesTestCase(unittest.TestCase):
         response = self.client.post('/finalize', json={'selectedCards': [4, 4]})
         self.assertEqual(response.status_code, 400)
         self.assertIn('Duplicate', response.get_json()['message'])
+
+    def test_select_cards_route_respects_block_setting(self):
+        payload = self.multilingual_theme_payload()
+        payload['select_cards_blocked'] = 'on'
+        self.client.post('/themes', data=payload)
+
+        response = self.client.get('/select-cards')
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('currently blocked', response.get_data(as_text=True))
+
+    def test_finalize_rejects_when_select_cards_is_blocked(self):
+        payload = self.multilingual_theme_payload()
+        payload['select_cards_blocked'] = 'on'
+        self.client.post('/themes', data=payload)
+
+        response = self.client.post('/finalize', json={'selectedCards': ['1', '2']})
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('blocked', response.get_json()['message'])
 
     def test_overview_reads_from_server_side_state(self):
         self.client.post('/finalize', json={'selectedCards': ['4', '5']})

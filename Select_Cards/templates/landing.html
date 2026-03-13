@@ -51,14 +51,34 @@
           <h1 class="display-6 fw-bold mb-2">Choose an application</h1>
           <p class="text-muted mb-4">Use the launcher below to open each card tool.</p>
 
+          {% if select_cards_blocked %}
+          <div class="alert alert-warning" role="alert">
+            {{ select_cards_block_message or 'Select Cards is currently blocked in configuration.' }}
+          </div>
+          {% endif %}
+
           <div class="app-grid app-grid-fixed-four">
+            {% if select_cards_blocked %}
+            <div class="app-tile app-tile-disabled" aria-label="Select Cards application is blocked">
+            {% else %}
             <a class="app-tile text-decoration-none" href="{{ url_for('select_cards') }}" aria-label="Open Select Cards application">
+            {% endif %}
               <div class="tile-image" aria-hidden="true">
                 <img src="{{ url_for('static', filename='Images/cards/Select Cards App Icon.png') }}" alt="">
               </div>
               <h2 class="h5 mb-1">Select Cards</h2>
-              <p class="small text-muted mb-0">Build and reorder your six-card selection.</p>
+              <p class="small text-muted mb-0">
+                {% if select_cards_blocked %}
+                Currently blocked in configuration.
+                {% else %}
+                Build and reorder your six-card selection.
+                {% endif %}
+              </p>
+            {% if select_cards_blocked %}
+            </div>
+            {% else %}
             </a>
+            {% endif %}
 
             <a class="app-tile text-decoration-none" href="{{ url_for('themes_page') }}" aria-label="Open Theme Labels application">
               <div class="tile-icon" aria-hidden="true"><i class="bi bi-palette"></i></div>

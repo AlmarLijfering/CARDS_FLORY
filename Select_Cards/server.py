@@ -46,6 +46,7 @@ def get_default_state():
         'theme_labels': get_default_theme_labels(),
         'card_labels': {},
         'language': 'en',
+        'select_cards_blocked': False,
     }
 
 
@@ -135,6 +136,8 @@ def normalize_state(raw_state):
     language = raw_state.get('language')
     if isinstance(language, str) and language in SUPPORTED_LANGUAGES:
         state['language'] = language
+
+    state['select_cards_blocked'] = bool(raw_state.get('select_cards_blocked'))
 
     return state
 
@@ -311,6 +314,11 @@ def get_validated_language(state=None):
     return 'en'
 
 
+def is_select_cards_blocked(state=None):
+    current_state = state or get_state()
+    return bool(current_state.get('select_cards_blocked'))
+
+
 def parse_language(payload):
     if not isinstance(payload, str):
         return None
@@ -344,7 +352,11 @@ def normalize_import_payload(data):
 
 @app.route('/')
 def landing_page():
-    return render_template('landing.html', username=get_state().get('username'))
+    return render_template(
+        'landing.html',
+        username=get_state().get('username'),
+        select_cards_blocked=is_select_cards_blocked(),
+    )
 
 
 @app.route('/login', methods=['POST'])
@@ -353,7 +365,11 @@ def login():
     state = get_state()
     state['username'] = username or None
     mark_state_dirty()
-    return render_template('landing.html', username=state['username'])
+    return render_template(
+        'landing.html',
+        username=state['username'],
+        select_cards_blocked=is_select_cards_blocked(state),
+    )
 
 
 @app.route('/logout', methods=['POST'])
@@ -361,16 +377,45 @@ def logout():
     state = get_state()
     state['username'] = None
     mark_state_dirty()
-    return render_template('landing.html', username=None)
+    return render_template(
+        'landing.html',
+        username=None,
+        select_cards_blocked=is_select_cards_blocked(state),
+    )
 
 
 @app.route('/select-cards')
 @app.route('/select_card')
 def select_cards():
+    if is_select_cards_blocked():
+        return render_template(
+            'landing.html',
+            username=get_state().get('username'),
+            select_cards_blocked=True,
+            select_cards_block_message='Select Cards is currently blocked in configuration.',
+        ), 403
+
     current_language = get_validated_language()
     theme_labels = get_theme_labels(language=current_language)
     theme_labels_by_language = get_theme_labels_map()
     card_assignments = get_validated_card_labels()
+    active_label_ids = sorted(
+        {
+            label_id
+            for assigned_labels in card_assignments.values()
+            for label_id in assigned_labels
+        }
+    )
+    available_filter_labels = [
+        {
+            'id': label_id,
+            'en': theme_labels_by_language['en'][label_id - 1],
+            'nl': theme_labels_by_language['nl'][label_id - 1],
+            'ro': theme_labels_by_language['ro'][label_id - 1],
+            'current': theme_labels[label_id - 1],
+        }
+        for label_id in active_label_ids
+    ]
     images = [
         {
             'id': i,
@@ -395,8 +440,7 @@ def select_cards():
     return render_template(
         'select_cards.html',
         images=images,
-        theme_labels=theme_labels,
-        theme_labels_by_language=theme_labels_by_language,
+        available_filter_labels=available_filter_labels,
         current_language=current_language,
     )
 
@@ -412,12 +456,14 @@ def themes_page():
                 field = f'label_{index}_{language}'
                 labels[language].append(request.form.get(field, '').strip() or f'Label {index}')
         state['theme_labels'] = labels
+        state['select_cards_blocked'] = request.form.get('select_cards_blocked') == 'on'
         mark_state_dirty()
         return redirect(url_for('themes_page', saved='1'))
 
     return render_template(
         'themes.html',
         labels_by_language=get_theme_labels_map(state),
+        select_cards_blocked=is_select_cards_blocked(state),
         saved=request.args.get('saved') == '1'
     )
 
@@ -518,6 +564,9 @@ def log():
 
 @app.route('/finalize', methods=['POST'])
 def finalize():
+    if is_select_cards_blocked():
+        return jsonify(status='error', message='Select Cards is currently blocked in configuration.'), 403
+
     data = request.get_json(silent=True) or {}
     selected_cards = data.get('selectedCards')
     validated_cards, error = parse_selected_cards(selected_cards)
@@ -550,6 +599,14 @@ def set_language():
 
 @app.route('/overview_cards')
 def overview_cards():
+    if is_select_cards_blocked():
+        return render_template(
+            'landing.html',
+            username=get_state().get('username'),
+            select_cards_blocked=True,
+            select_cards_block_message='Select Cards is currently blocked in configuration.',
+        ), 403
+
     selected_cards = get_validated_session_cards()
     images = [
         {'id': card_id, 'large': f'Images/cards/cards_l{card_id:03d}.png'}

@@ -12,6 +12,7 @@
   const galleryStatus = document.getElementById('gallery-status');
   const galleryLoading = document.getElementById('gallery-loading');
   const languageSelect = document.getElementById('language-select');
+  const leftContainer = document.getElementById('left-container');
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   let draggedElement = null;
@@ -248,6 +249,33 @@
     }
   }
 
+  function getVisibleGalleryBounds() {
+    const visibleSlots = placeholders.filter((slot) => !slot.classList.contains('hidden-by-filter'));
+    if (!visibleSlots.length) {
+      return null;
+    }
+
+    const containerRect = leftContainer ? leftContainer.getBoundingClientRect() : null;
+    const rects = visibleSlots.map((slot) => slot.getBoundingClientRect());
+    const bounds = {
+      left: Math.min(...rects.map((rect) => rect.left)),
+      right: Math.max(...rects.map((rect) => rect.right)),
+      top: Math.min(...rects.map((rect) => rect.top)),
+      bottom: Math.max(...rects.map((rect) => rect.bottom))
+    };
+
+    if (!containerRect) {
+      return bounds;
+    }
+
+    return {
+      left: Math.max(bounds.left, containerRect.left),
+      right: Math.min(bounds.right, containerRect.right),
+      top: Math.max(bounds.top, containerRect.top),
+      bottom: Math.min(bounds.bottom, containerRect.bottom)
+    };
+  }
+
   function applyInwardZoomClass(cardElement) {
     if (!cardElement || cardElement.classList.contains('selected-in-gallery')) {
       return;
@@ -255,12 +283,18 @@
 
     inwardZoomClasses.forEach((cssClass) => cardElement.classList.remove(cssClass));
 
-    const rect = cardElement.getBoundingClientRect();
-    const edgeThreshold = 150;
-    const nearTop = rect.top < edgeThreshold;
-    const nearBottom = window.innerHeight - rect.bottom < edgeThreshold;
-    const nearLeft = rect.left < edgeThreshold;
-    const nearRight = window.innerWidth - rect.right < edgeThreshold;
+    const slot = cardElement.closest('.placeholder');
+    const rect = (slot || cardElement).getBoundingClientRect();
+    const bounds = getVisibleGalleryBounds();
+    if (!bounds) {
+      return;
+    }
+
+    const edgeThreshold = 12;
+    const nearTop = rect.top <= bounds.top + edgeThreshold;
+    const nearBottom = rect.bottom >= bounds.bottom - edgeThreshold;
+    const nearLeft = rect.left <= bounds.left + edgeThreshold;
+    const nearRight = rect.right >= bounds.right - edgeThreshold;
 
     if (nearTop && nearLeft) {
       cardElement.classList.add('zoom-inward-top-left');
@@ -463,6 +497,13 @@
     }
     if (galleryLoading) {
       galleryLoading.style.display = 'none';
+    }
+
+    if (filterSelect) {
+      const availableOptions = Array.from(filterSelect.options).filter((option) => !option.hidden);
+      if (!availableOptions.some((option) => option.value === filterSelect.value)) {
+        filterSelect.value = 'all';
+      }
     }
   }
 

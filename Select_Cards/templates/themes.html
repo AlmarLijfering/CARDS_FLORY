@@ -24,6 +24,19 @@
           {% endif %}
 
           <form method="post" class="d-grid gap-3">
+            <div class="form-check form-switch">
+              <input
+                id="select_cards_blocked"
+                name="select_cards_blocked"
+                type="checkbox"
+                class="form-check-input"
+                {% if select_cards_blocked %}checked{% endif %}
+              >
+              <label class="form-check-label" for="select_cards_blocked">
+                Block Select Cards app, including direct URL access
+              </label>
+            </div>
+
             <div class="card-labels-table-wrapper">
               <table class="table table-sm align-middle card-labels-table">
                 <thead>

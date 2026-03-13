@@ -51,13 +51,13 @@ Select Cards
           <label for="filter-select" class="visually-hidden">Filter theme</label>
           <select id="filter-select" class="form-select" aria-label="Filter by label">
             <option value="all" data-i18n="allLabels">All labels</option>
-            {% for label in theme_labels %}
+            {% for label in available_filter_labels %}
             <option
-              value="{{ loop.index }}"
-              data-label-en="{{ theme_labels_by_language['en'][loop.index0] }}"
-              data-label-nl="{{ theme_labels_by_language['nl'][loop.index0] }}"
-              data-label-ro="{{ theme_labels_by_language['ro'][loop.index0] }}"
-            >{{ label }}</option>
+              value="{{ label.id }}"
+              data-label-en="{{ label.en }}"
+              data-label-nl="{{ label.nl }}"
+              data-label-ro="{{ label.ro }}"
+            >{{ label.current }}</option>
             {% endfor %}
           </select>
           <div id="gallery-status" class="small text-muted" aria-live="polite">{{ images|length }} cards shown</div>
@@ -85,7 +85,7 @@ Select Cards
   window.selectCardsConfig = {{ {
     'currentLanguage': current_language,
     'maxCards': 6,
-    'supportedLanguages': theme_labels_by_language.keys() | list,
+    'supportedLanguages': ['en', 'nl', 'ro'],
     'routes': {
       'finalize': url_for('finalize'),
       'overview': url_for('overview_cards'),
