@@ -194,7 +194,7 @@ def persist_request_state(response):
             max_age=STATE_COOKIE_MAX_AGE,
             httponly=True,
             samesite='Lax',
-            secure=not app.debug,
+            secure=not (app.debug or app.testing),
         )
 
     return response

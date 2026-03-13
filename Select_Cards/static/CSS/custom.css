@@ -491,6 +491,7 @@ h5 {
 .selected-in-gallery {
     opacity: 0.35;
     visibility: visible !important;
+    cursor: default;
 }
 
 .selected-in-gallery::after {
@@ -502,6 +503,12 @@ h5 {
     font-size: 0.7rem;
     border-radius: 999px;
     padding: 2px 8px;
+}
+
+.selected-in-gallery:hover {
+    transform: none;
+    border: 1px solid #c7c7c7;
+    z-index: auto;
 }
 
 .placeholder.hidden-by-filter {

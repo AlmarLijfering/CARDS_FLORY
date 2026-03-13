@@ -144,6 +144,19 @@
     });
   }
 
+  function getCardImageSource(cardElement) {
+    if (!cardElement) {
+      return '';
+    }
+
+    if (cardElement.dataset.large) {
+      return cardElement.dataset.large;
+    }
+
+    const img = cardElement.querySelector('img.large, img.small, img');
+    return img ? img.src : '';
+  }
+
   function createSelectedCard(sourceElement, dropzone) {
     const card = document.createElement('div');
     card.className = 'card';
@@ -151,7 +164,7 @@
     card.dataset.id = sourceElement.dataset.id;
 
     const img = document.createElement('img');
-    img.src = sourceElement.dataset.large;
+    img.src = getCardImageSource(sourceElement);
     img.classList.add('large');
     card.appendChild(img);
 
@@ -167,6 +180,7 @@
         sourceElement.classList.remove('selected-in-gallery');
         sourceElement.setAttribute('aria-disabled', 'false');
         sourceElement.setAttribute('draggable', 'true');
+        sourceElement.setAttribute('tabindex', '0');
       }
       dropzone.classList.add('empty');
       card.remove();
@@ -212,6 +226,7 @@
       slot.classList.add('empty', 'selected');
       cardElement.setAttribute('aria-disabled', 'true');
       cardElement.setAttribute('draggable', 'false');
+      cardElement.setAttribute('tabindex', '-1');
       if (!movingExistingCard) {
         cardElement.classList.add('selected-in-gallery');
       }
@@ -311,14 +326,7 @@
   }
 
   function getCardZoomSource(cardElement) {
-    if (!cardElement) {
-      return null;
-    }
-    if (cardElement.dataset.large) {
-      return cardElement.dataset.large;
-    }
-    const img = cardElement.querySelector('img.large, img.small, img');
-    return img ? img.src : null;
+    return getCardImageSource(cardElement) || null;
   }
 
   function openCardContextMenu(event, cardElement) {
@@ -365,6 +373,7 @@
 
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedElement.dataset.id || '');
     }
 
     draggedElement.classList.add('dragging');
@@ -436,15 +445,13 @@
   function updateGalleryVisibility() {
     const term = (searchInput?.value || '').trim().toLowerCase();
     const selectedLabel = filterSelect?.value || 'all';
-    const filtersActive = selectedLabel !== 'all' || term.length > 0;
     let visible = 0;
 
     placeholders.forEach((slot) => {
       const matchesSearch = (slot.dataset.search || '').includes(term);
       const labelToken = `,${selectedLabel},`;
       const matchesLabel = selectedLabel === 'all' || (slot.dataset.labelIds || '').includes(labelToken);
-      const hideSelectedSource = filtersActive && slot.classList.contains('selected');
-      const show = matchesSearch && matchesLabel && !hideSelectedSource;
+      const show = matchesSearch && matchesLabel;
       slot.classList.toggle('hidden-by-filter', !show);
       if (show) {
         visible += 1;
