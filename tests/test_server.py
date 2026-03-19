@@ -42,7 +42,9 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn('Choose an application', body)
-        self.assertIn('Configuration', body)
+        self.assertIn('Open Select Cards', body)
+        self.assertIn('Open Configuration', body)
+        self.assertNotIn('To be announced', body)
 
     def test_configuration_page_renders(self):
         response = self.client.get('/configuration')
@@ -66,9 +68,15 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertIn('data-label-en=', body)
         self.assertIn('data-label-nl=', body)
         self.assertIn('data-label-ro=', body)
-        self.assertIn('value="1"', body)
-        self.assertIn('value="3"', body)
-        self.assertNotIn('value="2"', body)
+        self.assertIn('role="list"', body)
+        self.assertIn('Selection slot 1, empty', body)
+        self.assertIn('use arrow keys to browse', body)
+        self.assertIn('id="filter-chip-row"', body)
+        self.assertIn('data-label-id="1"', body)
+        self.assertIn('data-label-id="3"', body)
+        self.assertIn('data-count="1"', body)
+        self.assertIn('id="gallery-empty-state"', body)
+        self.assertNotIn('id="filter-select"', body)
 
     def test_themes_page_renders(self):
         response = self.client.get('/themes')
@@ -191,6 +199,9 @@ class ServerRoutesTestCase(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertIn('cards_l004.png', body)
         self.assertIn('cards_l005.png', body)
+        self.assertIn('overview-order-chip', body)
+        self.assertIn('Edit Selection', body)
+        self.assertIn('Card 4', body)
 
     def test_overview_handles_invalid_stored_cards(self):
         self.client.post('/set-language', json={'language': 'en'})
@@ -257,6 +268,8 @@ class ServerRoutesTestCase(unittest.TestCase):
         self.assertIn('id="card-search"', body)
         self.assertIn('id="label-filter"', body)
         self.assertIn('id="assignment-filter"', body)
+        self.assertIn('id="card-labels-empty-state"', body)
+        self.assertIn('id="clear-card-label-filters"', body)
 
     def test_large_assignment_payload_does_not_expand_cookie(self):
         payload = {f'card_{card_id}_labels': ['1', '2', '3', '4', '5', '6'] for card_id in range(1, 113)}

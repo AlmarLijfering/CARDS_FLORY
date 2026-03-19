@@ -6,14 +6,22 @@
   const finalizeBtn = document.getElementById('finalize-btn');
   const selectionCount = document.getElementById('selection-count');
   const dropzones = Array.from(document.querySelectorAll('.dropzone'));
+  const dropzoneWrapper = document.querySelector('.dropzone-wrapper');
   const placeholders = Array.from(document.querySelectorAll('.placeholder'));
   const searchInput = document.getElementById('search-input');
-  const filterSelect = document.getElementById('filter-select');
   const galleryStatus = document.getElementById('gallery-status');
   const galleryLoading = document.getElementById('gallery-loading');
   const languageSelect = document.getElementById('language-select');
   const leftContainer = document.getElementById('left-container');
+  const galleryGrid = document.getElementById('gallery-grid');
+  const filterChipRow = document.getElementById('filter-chip-row');
+  const filterChips = Array.from(document.querySelectorAll('.filter-chip'));
+  const galleryEmptyState = document.getElementById('gallery-empty-state');
+  const clearGalleryFiltersButton = document.getElementById('clear-gallery-filters');
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  const guidanceStorageKey = 'selectCardsGuidanceCollapsed';
+  const guidanceMediaQuery = window.matchMedia('(max-width: 767.98px)');
 
   let draggedElement = null;
   let draggedFromPlaceholder = false;
@@ -22,6 +30,8 @@
   let contextMenu = null;
   let zoomOverlay = null;
   let currentLanguage = config.currentLanguage || 'en';
+  let activeFilter = filterChips.find((chip) => chip.classList.contains('is-active'))?.dataset.labelId || 'all';
+  let rovingCardId = null;
 
   const inwardZoomClasses = [
     'zoom-inward-top-left',
@@ -37,53 +47,77 @@
   const translations = {
     en: {
       selectionHeading: 'Your selection',
-      selectionHint: 'Tap to add, drag to reorder, and keep scrolling the grid.',
+      selectionHint: 'Click or tap to add, use arrow keys to browse, and move buttons to reorder.',
       finalize: 'Finalize Selection',
       limitHint: 'Up to 6 cards',
       nextStep: 'Next step: after finalizing, you will see an overview to review or share your selected cards.',
       availableImages: 'Available Images',
       mobileHint: 'Tap a card to add it above',
-      allLabels: 'All labels',
+      allChip: 'All',
       searchPlaceholder: 'Search by card number or label',
       selectedSuffix: 'selected',
       cardsShown: 'cards shown',
       zoom: 'Zoom',
       zoomedCard: 'Zoomed card',
       removeCard: 'Remove card {id} from selection',
+      moveEarlier: 'Move card {id} earlier',
+      moveLater: 'Move card {id} later',
+      selectionOrder: 'Selected cards order',
+      slotEmpty: 'Selection slot {slot}, empty',
+      slotFilled: 'Selection slot {slot}, contains card {id}',
+      noCardsMatch: 'No cards match this filter.',
+      emptyStateHint: 'Clear the search or switch labels to keep going.',
+      clearFilters: 'Clear filters',
       saveError: 'Unable to save your selection. Please try again.'
     },
     nl: {
       selectionHeading: 'Jouw selectie',
-      selectionHint: 'Tik om toe te voegen, sleep om te herschikken en blijf door het raster scrollen.',
+      selectionHint: 'Klik of tik om toe te voegen, gebruik pijltjes om te bladeren en verplaatsknoppen om te herschikken.',
       finalize: 'Selectie afronden',
       limitHint: 'Maximaal 6 kaarten',
       nextStep: 'Volgende stap: na het afronden zie je een overzicht om je kaarten te controleren of te delen.',
       availableImages: 'Beschikbare afbeeldingen',
       mobileHint: 'Tik op een kaart om die hierboven toe te voegen',
-      allLabels: 'Alle labels',
+      allChip: 'Alles',
       searchPlaceholder: 'Zoek op kaartnummer of label',
       selectedSuffix: 'geselecteerd',
       cardsShown: 'kaarten getoond',
       zoom: 'Vergroten',
       zoomedCard: 'Vergrote kaart',
       removeCard: 'Verwijder kaart {id} uit de selectie',
+      moveEarlier: 'Verplaats kaart {id} naar voren',
+      moveLater: 'Verplaats kaart {id} naar achteren',
+      selectionOrder: 'Volgorde van geselecteerde kaarten',
+      slotEmpty: 'Selectievak {slot}, leeg',
+      slotFilled: 'Selectievak {slot}, bevat kaart {id}',
+      noCardsMatch: 'Geen kaarten gevonden voor dit filter.',
+      emptyStateHint: 'Wis de zoekopdracht of kies een ander label om verder te gaan.',
+      clearFilters: 'Filters wissen',
       saveError: 'Je selectie kon niet worden opgeslagen. Probeer het opnieuw.'
     },
     ro: {
       selectionHeading: 'Selectia ta',
-      selectionHint: 'Atinge pentru a adauga, trage pentru a reordona si continua sa derulezi grila.',
+      selectionHint: 'Da click sau atinge pentru a adauga, foloseste sagetile pentru navigare si butoanele de mutare pentru reordonare.',
       finalize: 'Finalizeaza selectia',
       limitHint: 'Pana la 6 carti',
       nextStep: 'Pasul urmator: dupa finalizare vei vedea o prezentare pentru a revizui sau partaja cartile selectate.',
       availableImages: 'Imagini disponibile',
       mobileHint: 'Atinge o carte pentru a o adauga mai sus',
-      allLabels: 'Toate etichetele',
+      allChip: 'Toate',
       searchPlaceholder: 'Cauta dupa numarul cartii sau eticheta',
       selectedSuffix: 'selectate',
       cardsShown: 'carti afisate',
       zoom: 'Mareste',
       zoomedCard: 'Carte marita',
       removeCard: 'Elimina cartea {id} din selectie',
+      moveEarlier: 'Muta cartea {id} mai devreme',
+      moveLater: 'Muta cartea {id} mai tarziu',
+      selectionOrder: 'Ordinea cartilor selectate',
+      slotEmpty: 'Slotul de selectie {slot}, gol',
+      slotFilled: 'Slotul de selectie {slot}, contine cartea {id}',
+      noCardsMatch: 'Nicio carte nu corespunde acestui filtru.',
+      emptyStateHint: 'Sterge cautarea sau schimba eticheta pentru a continua.',
+      clearFilters: 'Sterge filtrele',
       saveError: 'Selectia nu a putut fi salvata. Incearca din nou.'
     }
   };
@@ -97,14 +131,165 @@
     return t(key).replace(/\{(\w+)\}/g, (_, name) => params[name] || '');
   }
 
+  function readStoredGuidancePreference() {
+    try {
+      return window.localStorage.getItem(guidanceStorageKey) === '1';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function persistGuidancePreference(isCollapsed) {
+    try {
+      window.localStorage.setItem(guidanceStorageKey, isCollapsed ? '1' : '0');
+    } catch (error) {
+      // ignore storage failures
+    }
+  }
+
+  function collapseGuidance() {
+    if (!guidanceMediaQuery.matches) {
+      return;
+    }
+    document.body.classList.add('selection-guidance-collapsed');
+    persistGuidancePreference(true);
+  }
+
+  function getAllGalleryCards() {
+    return placeholders
+      .map((slot) => slot.querySelector('.card'))
+      .filter(Boolean);
+  }
+
+  function isVisibleGalleryCard(cardElement) {
+    const slot = cardElement.closest('.placeholder');
+    return Boolean(slot) && !slot.classList.contains('hidden-by-filter');
+  }
+
+  function isNavigableGalleryCard(cardElement) {
+    return cardElement.closest('.placeholder')
+      && isVisibleGalleryCard(cardElement)
+      && cardElement.getAttribute('aria-disabled') !== 'true'
+      && !cardElement.classList.contains('selected-in-gallery');
+  }
+
+  function getNavigableGalleryCards() {
+    return getAllGalleryCards().filter(isNavigableGalleryCard);
+  }
+
+  function updateGalleryTabStops(preferredCard = null) {
+    const allCards = getAllGalleryCards();
+    const navigableCards = getNavigableGalleryCards();
+
+    allCards.forEach((card) => {
+      if (card.closest('.placeholder')) {
+        card.setAttribute('tabindex', '-1');
+      }
+    });
+
+    if (!navigableCards.length) {
+      rovingCardId = null;
+      return;
+    }
+
+    let targetCard = preferredCard && navigableCards.includes(preferredCard)
+      ? preferredCard
+      : navigableCards.find((card) => card.dataset.id === rovingCardId);
+
+    if (!targetCard) {
+      targetCard = navigableCards[0];
+    }
+
+    targetCard.setAttribute('tabindex', '0');
+    rovingCardId = targetCard.dataset.id;
+  }
+
+  function focusGalleryCard(cardElement) {
+    if (!cardElement) {
+      return;
+    }
+    updateGalleryTabStops(cardElement);
+    cardElement.focus();
+  }
+
+  function getGalleryColumns() {
+    if (!galleryGrid) {
+      return 1;
+    }
+
+    const firstVisibleSlot = placeholders.find((slot) => !slot.classList.contains('hidden-by-filter'));
+    if (!firstVisibleSlot) {
+      return 1;
+    }
+
+    const slotWidth = firstVisibleSlot.getBoundingClientRect().width || 128;
+    const gridWidth = galleryGrid.getBoundingClientRect().width || slotWidth;
+    return Math.max(1, Math.round(gridWidth / slotWidth));
+  }
+
   function getFirstEmptyDropzone() {
     return dropzones.find((zone) => zone.classList.contains('empty'));
+  }
+
+  function updateDropzoneAccessibility(dropzone) {
+    if (!dropzone) {
+      return;
+    }
+
+    const slot = dropzone.dataset.zone || '';
+    const card = dropzone.querySelector('.card');
+
+    if (!card || dropzone.classList.contains('empty')) {
+      dropzone.setAttribute('aria-label', interpolate('slotEmpty', { slot }));
+      return;
+    }
+
+    dropzone.setAttribute('aria-label', interpolate('slotFilled', { slot, id: card.dataset.id }));
+  }
+
+  function updateSelectedCardControls() {
+    if (dropzoneWrapper) {
+      dropzoneWrapper.setAttribute('aria-label', t('selectionOrder'));
+    }
+
+    dropzones.forEach((dropzone, index) => {
+      const card = dropzone.querySelector('.card');
+      if (!card) {
+        updateDropzoneAccessibility(dropzone);
+        return;
+      }
+
+      const cardId = card.dataset.id;
+      const moveEarlierBtn = card.querySelector('[data-action="move-earlier"]');
+      const moveLaterBtn = card.querySelector('[data-action="move-later"]');
+      const removeBtn = card.querySelector('.remove-btn');
+
+      if (moveEarlierBtn) {
+        moveEarlierBtn.disabled = index === 0;
+        moveEarlierBtn.setAttribute('aria-label', interpolate('moveEarlier', { id: cardId }));
+        moveEarlierBtn.title = interpolate('moveEarlier', { id: cardId });
+      }
+
+      if (moveLaterBtn) {
+        moveLaterBtn.disabled = index === dropzones.length - 1;
+        moveLaterBtn.setAttribute('aria-label', interpolate('moveLater', { id: cardId }));
+        moveLaterBtn.title = interpolate('moveLater', { id: cardId });
+      }
+
+      if (removeBtn) {
+        removeBtn.setAttribute('aria-label', interpolate('removeCard', { id: cardId }));
+        removeBtn.title = interpolate('removeCard', { id: cardId });
+      }
+
+      updateDropzoneAccessibility(dropzone);
+    });
   }
 
   function updateSelectionCount() {
     if (!selectionCount) {
       return;
     }
+
     selectionCount.textContent = `${selectedCardsCount}/${maxCards} ${t('selectedSuffix')}`;
     selectionCount.classList.toggle('text-bg-primary', selectedCardsCount > 0);
     selectionCount.classList.toggle('text-bg-light', selectedCardsCount === 0);
@@ -114,6 +299,7 @@
     if (!finalizeBtn) {
       return;
     }
+
     finalizeBtn.disabled = selectedCardsCount === 0;
     finalizeBtn.textContent = selectedCardsCount > 0
       ? `${t('finalize')} (${selectedCardsCount}/${maxCards})`
@@ -121,27 +307,30 @@
     updateSelectionCount();
   }
 
-  function updateFilterOptionLabels() {
-    if (!filterSelect) {
-      return;
-    }
-
+  function updateFilterChipLabels() {
     const labelKeyByLanguage = {
       en: 'labelEn',
       nl: 'labelNl',
       ro: 'labelRo'
     };
 
-    Array.from(filterSelect.options).forEach((option) => {
-      if (option.value === 'all') {
-        option.textContent = t('allLabels');
-        return;
-      }
+    filterChips.forEach((chip) => {
+      const count = chip.dataset.count || '0';
+      const localizedLabel = chip.dataset.labelId === 'all'
+        ? t('allChip')
+        : (chip.dataset[labelKeyByLanguage[currentLanguage]] || chip.dataset.labelEn || '');
 
-      const localizedLabel = option.dataset[labelKeyByLanguage[currentLanguage]]
-        || option.dataset.labelEn
-        || option.textContent;
-      option.textContent = localizedLabel;
+      chip.textContent = `${localizedLabel} (${count})`;
+      chip.setAttribute('aria-pressed', chip.classList.contains('is-active') ? 'true' : 'false');
+    });
+  }
+
+  function setActiveFilter(labelId) {
+    activeFilter = labelId;
+    filterChips.forEach((chip) => {
+      const isActive = chip.dataset.labelId === labelId;
+      chip.classList.toggle('is-active', isActive);
+      chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
   }
 
@@ -158,11 +347,72 @@
     return img ? img.src : '';
   }
 
+  function moveSelectedCard(cardElement, direction) {
+    const currentDropzone = cardElement.closest('.dropzone');
+    if (!currentDropzone) {
+      return false;
+    }
+
+    const currentIndex = dropzones.indexOf(currentDropzone);
+    const targetDropzone = dropzones[currentIndex + direction];
+    if (!targetDropzone) {
+      return false;
+    }
+
+    const targetCard = targetDropzone.querySelector('.card');
+
+    if (targetCard) {
+      currentDropzone.innerHTML = '';
+      currentDropzone.appendChild(targetCard);
+      currentDropzone.classList.remove('empty');
+    } else {
+      currentDropzone.innerHTML = '';
+      currentDropzone.classList.add('empty');
+    }
+
+    targetDropzone.innerHTML = '';
+    targetDropzone.appendChild(cardElement);
+    targetDropzone.classList.remove('empty');
+
+    updateFinalizeButton();
+    updateSelectedCardControls();
+    return true;
+  }
+
   function createSelectedCard(sourceElement, dropzone) {
     const card = document.createElement('div');
     card.className = 'card';
     card.draggable = true;
     card.dataset.id = sourceElement.dataset.id;
+
+    const controls = document.createElement('div');
+    controls.className = 'selection-card-controls';
+    controls.addEventListener('click', (event) => event.stopPropagation());
+    controls.addEventListener('pointerdown', (event) => event.stopPropagation());
+
+    const moveEarlierBtn = document.createElement('button');
+    moveEarlierBtn.type = 'button';
+    moveEarlierBtn.className = 'selection-action-btn';
+    moveEarlierBtn.dataset.action = 'move-earlier';
+    moveEarlierBtn.innerHTML = '<i class="bi bi-arrow-left" aria-hidden="true"></i>';
+    moveEarlierBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      moveSelectedCard(card, -1);
+    });
+    controls.appendChild(moveEarlierBtn);
+
+    const moveLaterBtn = document.createElement('button');
+    moveLaterBtn.type = 'button';
+    moveLaterBtn.className = 'selection-action-btn';
+    moveLaterBtn.dataset.action = 'move-later';
+    moveLaterBtn.innerHTML = '<i class="bi bi-arrow-right" aria-hidden="true"></i>';
+    moveLaterBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      moveSelectedCard(card, 1);
+    });
+    controls.appendChild(moveLaterBtn);
 
     const img = document.createElement('img');
     img.src = getCardImageSource(sourceElement);
@@ -170,10 +420,13 @@
     card.appendChild(img);
 
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-btn';
-    removeBtn.innerHTML = '&times;';
-    removeBtn.setAttribute('aria-label', interpolate('removeCard', { id: sourceElement.dataset.id }));
-    removeBtn.addEventListener('click', () => {
+    removeBtn.type = 'button';
+    removeBtn.className = 'selection-action-btn remove-btn';
+    removeBtn.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+    removeBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
       const slot = document.getElementById(`slot-${sourceElement.dataset.id}`);
       if (slot) {
         slot.classList.remove('empty', 'selected');
@@ -181,15 +434,23 @@
         sourceElement.classList.remove('selected-in-gallery');
         sourceElement.setAttribute('aria-disabled', 'false');
         sourceElement.setAttribute('draggable', 'true');
-        sourceElement.setAttribute('tabindex', '0');
       }
+
       dropzone.classList.add('empty');
       card.remove();
       selectedCardsCount = Math.max(selectedCardsCount - 1, 0);
       updateFinalizeButton();
-      updateGalleryVisibility();
+      updateGalleryVisibility(sourceElement);
+      updateSelectedCardControls();
+      if (isNavigableGalleryCard(sourceElement)) {
+        focusGalleryCard(sourceElement);
+      } else {
+        updateGalleryTabStops();
+        searchInput?.focus();
+      }
     });
-    card.appendChild(removeBtn);
+    controls.appendChild(removeBtn);
+    card.appendChild(controls);
 
     bindCardInteractions(card);
     return card;
@@ -227,7 +488,6 @@
       slot.classList.add('empty', 'selected');
       cardElement.setAttribute('aria-disabled', 'true');
       cardElement.setAttribute('draggable', 'false');
-      cardElement.setAttribute('tabindex', '-1');
       if (!movingExistingCard) {
         cardElement.classList.add('selected-in-gallery');
       }
@@ -236,6 +496,7 @@
     selectedCardsCount += 1;
     updateFinalizeButton();
     updateGalleryVisibility();
+    updateSelectedCardControls();
     return true;
   }
 
@@ -243,9 +504,29 @@
     if (!cardElement.closest('.placeholder')) {
       return;
     }
+
+    if (cardElement.classList.contains('selected-in-gallery') || cardElement.getAttribute('aria-disabled') === 'true') {
+      return;
+    }
+
     const targetDropzone = getFirstEmptyDropzone();
+    const focusShouldAdvance = document.activeElement === cardElement;
+    const navigableBefore = getNavigableGalleryCards();
+    const previousIndex = navigableBefore.indexOf(cardElement);
+
     if (targetDropzone && placeCardInDropzone(cardElement, targetDropzone)) {
       placementSucceeded = true;
+      collapseGuidance();
+
+      if (focusShouldAdvance) {
+        const navigableAfter = getNavigableGalleryCards();
+        const nextCard = navigableAfter[previousIndex] || navigableAfter[navigableAfter.length - 1];
+        if (nextCard) {
+          focusGalleryCard(nextCard);
+        } else {
+          searchInput?.focus();
+        }
+      }
     }
   }
 
@@ -440,18 +721,20 @@
   }
 
   function moveFocus(currentCard, key) {
-    const visibleCards = Array.from(document.querySelectorAll('.placeholder:not(.hidden-by-filter) .card'));
+    const visibleCards = getNavigableGalleryCards();
     const currentIndex = visibleCards.indexOf(currentCard);
     if (currentIndex === -1) {
       return;
     }
-    const columns = Math.max(1, Math.floor(document.querySelector('.card-wrapper').offsetWidth / 132));
+
+    const columns = getGalleryColumns();
     let nextIndex = currentIndex;
     if (key === 'ArrowRight') nextIndex = Math.min(visibleCards.length - 1, currentIndex + 1);
     if (key === 'ArrowLeft') nextIndex = Math.max(0, currentIndex - 1);
     if (key === 'ArrowDown') nextIndex = Math.min(visibleCards.length - 1, currentIndex + columns);
     if (key === 'ArrowUp') nextIndex = Math.max(0, currentIndex - columns);
-    visibleCards[nextIndex]?.focus();
+
+    focusGalleryCard(visibleCards[nextIndex]);
   }
 
   function bindCardInteractions(card) {
@@ -459,32 +742,59 @@
     card.addEventListener('dragend', handleDragEnd);
     card.addEventListener('mouseenter', () => applyInwardZoomClass(card));
     card.addEventListener('contextmenu', (event) => openCardContextMenu(event, card));
+    card.addEventListener('focus', () => {
+      if (isNavigableGalleryCard(card)) {
+        updateGalleryTabStops(card);
+      }
+    });
+    card.addEventListener('click', () => handleCardSelection(card));
     card.addEventListener('dblclick', () => handleCardSelection(card));
     card.addEventListener('keydown', (event) => {
+      const inSelectionPanel = Boolean(card.closest('.dropzone'));
+
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         handleCardSelection(card);
+        return;
       }
-      if (event.key.startsWith('Arrow')) {
+
+      if (inSelectionPanel && (event.key === 'ArrowLeft' || event.key === 'ArrowUp')) {
+        event.preventDefault();
+        moveSelectedCard(card, -1);
+        return;
+      }
+
+      if (inSelectionPanel && (event.key === 'ArrowRight' || event.key === 'ArrowDown')) {
+        event.preventDefault();
+        moveSelectedCard(card, 1);
+        return;
+      }
+
+      if (!inSelectionPanel && event.key.startsWith('Arrow')) {
         event.preventDefault();
         moveFocus(card, event.key);
       }
     });
-
-    if (isTouchDevice) {
-      card.addEventListener('click', () => handleCardSelection(card));
-    }
   }
 
-  function updateGalleryVisibility() {
+  function clearGalleryFilters() {
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    setActiveFilter('all');
+    updateGalleryVisibility();
+    searchInput?.focus();
+  }
+
+  function updateGalleryVisibility(preferredCard = null) {
     const term = (searchInput?.value || '').trim().toLowerCase();
-    const selectedLabel = filterSelect?.value || 'all';
     let visible = 0;
 
     placeholders.forEach((slot) => {
       const matchesSearch = (slot.dataset.search || '').includes(term);
-      const labelToken = `,${selectedLabel},`;
-      const matchesLabel = selectedLabel === 'all' || (slot.dataset.labelIds || '').includes(labelToken);
+      const labelToken = `,${activeFilter},`;
+      const matchesLabel = activeFilter === 'all' || (slot.dataset.labelIds || '').includes(labelToken);
       const show = matchesSearch && matchesLabel;
       slot.classList.toggle('hidden-by-filter', !show);
       if (show) {
@@ -495,22 +805,28 @@
     if (galleryStatus) {
       galleryStatus.textContent = `${visible} ${t('cardsShown')}`;
     }
+
     if (galleryLoading) {
       galleryLoading.style.display = 'none';
     }
 
-    if (filterSelect) {
-      const availableOptions = Array.from(filterSelect.options).filter((option) => !option.hidden);
-      if (!availableOptions.some((option) => option.value === filterSelect.value)) {
-        filterSelect.value = 'all';
-      }
+    const isEmpty = visible === 0;
+    if (galleryEmptyState) {
+      galleryEmptyState.hidden = !isEmpty;
+      galleryEmptyState.classList.toggle('d-none', !isEmpty);
     }
+    if (galleryGrid) {
+      galleryGrid.hidden = isEmpty;
+    }
+
+    updateGalleryTabStops(preferredCard);
   }
 
   function persistLanguage(language) {
     if (!routes.setLanguage) {
       return;
     }
+
     fetch(routes.setLanguage, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -536,9 +852,10 @@
       }
     });
 
-    updateFilterOptionLabels();
+    updateFilterChipLabels();
     updateFinalizeButton();
     updateGalleryVisibility();
+    updateSelectedCardControls();
     persistLanguage(currentLanguage);
   }
 
@@ -559,6 +876,7 @@
     if (!routes.finalize) {
       return;
     }
+
     fetch(routes.finalize, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -583,8 +901,22 @@
 
   document.querySelectorAll('.card').forEach(bindCardInteractions);
 
-  searchInput?.addEventListener('input', updateGalleryVisibility);
-  filterSelect?.addEventListener('change', updateGalleryVisibility);
+  searchInput?.addEventListener('input', () => {
+    updateGalleryVisibility();
+    if (searchInput.value.trim()) {
+      collapseGuidance();
+    }
+  });
+
+  filterChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      setActiveFilter(chip.dataset.labelId || 'all');
+      updateGalleryVisibility();
+      collapseGuidance();
+    });
+  });
+
+  clearGalleryFiltersButton?.addEventListener('click', clearGalleryFilters);
   languageSelect?.addEventListener('change', () => applyLanguage(languageSelect.value));
   finalizeBtn?.addEventListener('click', submitSelection);
 
@@ -635,6 +967,12 @@
   window.addEventListener('scroll', closeContextMenu, true);
   window.addEventListener('resize', closeContextMenu);
 
+  if (readStoredGuidancePreference()) {
+    document.body.classList.add('selection-guidance-collapsed');
+  }
+
+  setActiveFilter(activeFilter);
   updateFinalizeButton();
+  updateSelectedCardControls();
   applyLanguage(currentLanguage);
 }());

@@ -11,24 +11,24 @@ Select Cards
       <div class="selection-header d-flex align-items-center justify-content-between">
         <div>
           <h5 class="mb-1" data-i18n="selectionHeading">Your selection</h5>
-          <p class="text-muted small mb-2" data-i18n="selectionHint">Tap to add, drag to reorder, and keep scrolling the grid.</p>
+          <p class="text-muted small mb-2 selection-hint-text" data-i18n="selectionHint">Click or tap to add, use arrow keys to browse, and move buttons to reorder.</p>
         </div>
         <span id="selection-count" class="badge rounded-pill text-bg-light border" aria-live="polite" aria-atomic="true">0/6 selected</span>
       </div>
-      <div class="dropzone-wrapper rail">
-        <div id="dropzone-1" class="dropzone empty" data-zone="1"></div>
-        <div id="dropzone-2" class="dropzone empty" data-zone="2"></div>
-        <div id="dropzone-3" class="dropzone empty" data-zone="3"></div>
-        <div id="dropzone-4" class="dropzone empty" data-zone="4"></div>
-        <div id="dropzone-5" class="dropzone empty" data-zone="5"></div>
-        <div id="dropzone-6" class="dropzone empty" data-zone="6"></div>
+      <div class="dropzone-wrapper rail" role="list" aria-label="Selected cards order">
+        <div id="dropzone-1" class="dropzone empty" data-zone="1" role="listitem" aria-label="Selection slot 1, empty"></div>
+        <div id="dropzone-2" class="dropzone empty" data-zone="2" role="listitem" aria-label="Selection slot 2, empty"></div>
+        <div id="dropzone-3" class="dropzone empty" data-zone="3" role="listitem" aria-label="Selection slot 3, empty"></div>
+        <div id="dropzone-4" class="dropzone empty" data-zone="4" role="listitem" aria-label="Selection slot 4, empty"></div>
+        <div id="dropzone-5" class="dropzone empty" data-zone="5" role="listitem" aria-label="Selection slot 5, empty"></div>
+        <div id="dropzone-6" class="dropzone empty" data-zone="6" role="listitem" aria-label="Selection slot 6, empty"></div>
       </div>
       <div class="selection-actions d-flex flex-column gap-2 mt-3">
         <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
           <button id="finalize-btn" class="btn btn-primary finalize-btn flex-fill" disabled data-i18n="finalize">Finalize Selection</button>
           <span class="text-muted small text-center d-none d-sm-inline" data-i18n="limitHint">Up to 6 cards</span>
         </div>
-        <p class="small text-muted mb-0" data-i18n="nextStep">Next step: after finalizing, you will see an overview to review or share your selected cards.</p>
+        <p class="small text-muted mb-0 selection-next-step" data-i18n="nextStep">Next step: after finalizing, you will see an overview to review or share your selected cards.</p>
       </div>
     </div>
     <div class="col-12 col-lg-7 order-2 order-lg-1">
@@ -48,28 +48,35 @@ Select Cards
         <div class="gallery-toolbar" role="region" aria-label="Search and filter cards">
           <label for="search-input" class="visually-hidden">Search cards</label>
           <input id="search-input" type="search" class="form-control" placeholder="Search by card number or label" data-i18n-placeholder="searchPlaceholder">
-          <label for="filter-select" class="visually-hidden">Filter theme</label>
-          <select id="filter-select" class="form-select" aria-label="Filter by label">
-            <option value="all" data-i18n="allLabels">All labels</option>
+          <div id="filter-chip-row" class="filter-chip-row" role="toolbar" aria-label="Filter by label">
+            <button type="button" class="filter-chip is-active" data-label-id="all" data-count="{{ images|length }}">All ({{ images|length }})</button>
             {% for label in available_filter_labels %}
-            <option
-              value="{{ label.id }}"
+            <button
+              type="button"
+              class="filter-chip"
+              data-label-id="{{ label.id }}"
+              data-count="{{ label.count }}"
               data-label-en="{{ label.en }}"
               data-label-nl="{{ label.nl }}"
               data-label-ro="{{ label.ro }}"
-            >{{ label.current }}</option>
+            >{{ label.current }} ({{ label.count }})</button>
             {% endfor %}
-          </select>
+          </div>
           <div id="gallery-status" class="small text-muted" aria-live="polite">{{ images|length }} cards shown</div>
         </div>
-        <div class="card-wrapper" role="grid" aria-label="Available image cards">
+        <div id="gallery-empty-state" class="gallery-empty-state d-none" role="status" aria-live="polite">
+          <p class="mb-2 fw-semibold" data-i18n="noCardsMatch">No cards match this filter.</p>
+          <p class="small text-muted mb-3" data-i18n="emptyStateHint">Clear the search or switch labels to keep going.</p>
+          <button id="clear-gallery-filters" type="button" class="btn btn-outline-primary" data-i18n="clearFilters">Clear filters</button>
+        </div>
+        <div id="gallery-grid" class="card-wrapper" role="grid" aria-label="Available image cards">
           {% for image in images %}
           <div id="slot-{{ image.id }}" class="placeholder empty"
             data-label-ids=",{{ image.label_ids|join(',') }},"
             data-search="{{ image.search_text }}"
             role="gridcell">
             <div id="card-{{ image.id }}" class="card" draggable="true" data-id="{{ image.id }}"
-              data-large="{{ url_for('static', filename=image.large) }}" aria-label="Card {{ image.id }}" tabindex="0">
+              data-large="{{ url_for('static', filename=image.large) }}" aria-label="Card {{ image.id }}" tabindex="-1">
               <img src="{{ url_for('static', filename=image.small) }}" class="small" loading="lazy" alt="Card {{ image.id }}">
             </div>
           </div>

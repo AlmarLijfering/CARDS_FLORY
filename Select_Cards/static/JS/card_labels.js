@@ -4,6 +4,10 @@
   const assignmentFilter = document.getElementById('assignment-filter');
   const status = document.getElementById('card-filter-status');
   const rows = Array.from(document.querySelectorAll('[data-card-row]'));
+  const emptyState = document.getElementById('card-labels-empty-state');
+  const clearFiltersButton = document.getElementById('clear-card-label-filters');
+  const tableWrapper = document.getElementById('card-labels-table-wrapper');
+  const stickyActions = document.getElementById('card-labels-sticky-actions');
 
   function matchesSearch(row, term) {
     return (row.dataset.search || '').includes(term);
@@ -20,21 +24,38 @@
     if (assignmentState === 'all') {
       return true;
     }
+
     const isAssigned = row.dataset.assigned === 'true';
     return assignmentState === 'assigned' ? isAssigned : !isAssigned;
   }
 
   function updateRowAssignmentState(row) {
-    const checkedCount = row.querySelectorAll('input[type="checkbox"]:checked').length;
-    const labelIds = Array.from(row.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
-    row.dataset.assigned = checkedCount > 0 ? 'true' : 'false';
+    const checkedInputs = Array.from(row.querySelectorAll('input[type="checkbox"]:checked'));
+    const labelIds = checkedInputs.map((input) => input.value);
+
+    row.dataset.assigned = checkedInputs.length > 0 ? 'true' : 'false';
     row.dataset.labelIds = labelIds.length ? `,${labelIds.join(',')},` : ',,';
     row.dataset.search = [
       row.dataset.cardId || '',
       ...Array.from(row.querySelectorAll('.form-check-label')).map((node, index) => {
-        return row.querySelectorAll('input[type="checkbox"]')[index].checked ? node.textContent.toLowerCase() : '';
+        const input = row.querySelectorAll('input[type="checkbox"]')[index];
+        return input.checked ? node.textContent.toLowerCase() : '';
       })
     ].join(' ');
+  }
+
+  function clearFilters() {
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    if (labelFilter) {
+      labelFilter.value = 'all';
+    }
+    if (assignmentFilter) {
+      assignmentFilter.value = 'all';
+    }
+    updateVisibility();
+    searchInput?.focus();
   }
 
   function updateVisibility() {
@@ -44,7 +65,10 @@
     let visible = 0;
 
     rows.forEach((row) => {
-      const show = matchesSearch(row, term) && matchesLabel(row, selectedLabel) && matchesAssignment(row, assignmentState);
+      const show = matchesSearch(row, term)
+        && matchesLabel(row, selectedLabel)
+        && matchesAssignment(row, assignmentState);
+
       row.classList.toggle('card-row-hidden', !show);
       if (show) {
         visible += 1;
@@ -53,6 +77,18 @@
 
     if (status) {
       status.textContent = `${visible} cards visible`;
+    }
+
+    const isEmpty = visible === 0;
+    if (emptyState) {
+      emptyState.hidden = !isEmpty;
+      emptyState.classList.toggle('d-none', !isEmpty);
+    }
+    if (tableWrapper) {
+      tableWrapper.hidden = isEmpty;
+    }
+    if (stickyActions) {
+      stickyActions.hidden = isEmpty;
     }
   }
 
@@ -69,6 +105,7 @@
   searchInput?.addEventListener('input', updateVisibility);
   labelFilter?.addEventListener('change', updateVisibility);
   assignmentFilter?.addEventListener('change', updateVisibility);
+  clearFiltersButton?.addEventListener('click', clearFilters);
 
   updateVisibility();
 }());

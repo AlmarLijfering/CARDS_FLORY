@@ -421,6 +421,10 @@ def select_cards():
             for label_id in assigned_labels
         }
     )
+    label_counts = {
+        label_id: sum(1 for assigned_labels in card_assignments.values() if label_id in assigned_labels)
+        for label_id in active_label_ids
+    }
     available_filter_labels = [
         {
             'id': label_id,
@@ -428,6 +432,7 @@ def select_cards():
             'nl': theme_labels_by_language['nl'][label_id - 1],
             'ro': theme_labels_by_language['ro'][label_id - 1],
             'current': theme_labels[label_id - 1],
+            'count': label_counts.get(label_id, 0),
         }
         for label_id in active_label_ids
     ]

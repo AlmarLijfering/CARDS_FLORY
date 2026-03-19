@@ -142,7 +142,7 @@ class BrowserRegressionTestCase(unittest.TestCase):
             page = context.new_page()
             page.goto(f'{self.base_url}/select-cards', wait_until='networkidle')
 
-            page.select_option('#filter-select', '1')
+            page.click('[data-label-id="1"]')
             page.wait_for_timeout(150)
             page.dblclick('#card-1')
             page.wait_for_timeout(150)
@@ -204,9 +204,107 @@ class BrowserRegressionTestCase(unittest.TestCase):
             image_sources = page.locator('#card-container .card img').evaluate_all(
                 "nodes => nodes.map(node => node.getAttribute('src'))"
             )
+            card_labels = page.locator('.overview-card-meta').all_inner_texts()
+            order_chips = page.locator('.overview-order-chip').all_inner_texts()
             self.assertEqual(len(image_sources), 2)
             self.assertTrue(image_sources[0].endswith('cards_l002.png'))
             self.assertTrue(image_sources[1].endswith('cards_l001.png'))
+            self.assertEqual(card_labels, ['Card 2', 'Card 1'])
+            self.assertEqual(order_chips, ['1', '2'])
+            self.assertEqual(page.locator('#back-btn').inner_text(), 'Edit Selection')
+
+            browser.close()
+
+    def test_click_selection_and_move_buttons_reorder(self):
+        seeded_session = self.prepare_stateful_session()
+
+        with sync_playwright() as playwright:
+            browser, context = self.new_browser_context_with_session(playwright, seeded_session)
+            page = context.new_page()
+            page.goto(f'{self.base_url}/select-cards', wait_until='networkidle')
+
+            page.click('#card-1')
+            page.click('#card-2')
+            page.wait_for_timeout(200)
+
+            self.assertEqual(
+                page.locator('#dropzone-1').get_attribute('aria-label'),
+                'Selection slot 1, contains card 1',
+            )
+            self.assertEqual(
+                page.locator('#dropzone-2').get_attribute('aria-label'),
+                'Selection slot 2, contains card 2',
+            )
+
+            page.click('#dropzone-1 [data-action="move-later"]')
+            page.wait_for_timeout(150)
+
+            self.assertEqual(
+                page.locator('#dropzone-1').get_attribute('aria-label'),
+                'Selection slot 1, contains card 2',
+            )
+            self.assertEqual(
+                page.locator('#dropzone-2').get_attribute('aria-label'),
+                'Selection slot 2, contains card 1',
+            )
+
+            browser.close()
+
+    def test_gallery_uses_roving_tabindex_for_keyboard_selection(self):
+        seeded_session = self.prepare_stateful_session()
+
+        with sync_playwright() as playwright:
+            browser, context = self.new_browser_context_with_session(playwright, seeded_session)
+            page = context.new_page()
+            page.goto(f'{self.base_url}/select-cards', wait_until='networkidle')
+
+            self.assertEqual(page.locator('.card-wrapper .card[tabindex="0"]').count(), 1)
+            self.assertEqual(page.locator('.card-wrapper .card[tabindex="0"]').get_attribute('id'), 'card-1')
+
+            page.locator('#card-1').focus()
+            page.keyboard.press('ArrowRight')
+            self.assertEqual(page.locator('.card-wrapper .card[tabindex="0"]').get_attribute('id'), 'card-2')
+
+            page.keyboard.press('Enter')
+            page.wait_for_timeout(150)
+
+            self.assertEqual(
+                page.locator('#dropzone-1').get_attribute('aria-label'),
+                'Selection slot 1, contains card 2',
+            )
+            self.assertEqual(page.locator('.card-wrapper .card[tabindex="0"]').count(), 1)
+            self.assertEqual(page.locator('.card-wrapper .card[tabindex="0"]').get_attribute('id'), 'card-3')
+
+            browser.close()
+
+    def test_empty_states_offer_clear_filter_actions(self):
+        seeded_session = self.prepare_stateful_session()
+
+        with sync_playwright() as playwright:
+            browser, context = self.new_browser_context_with_session(playwright, seeded_session)
+            page = context.new_page()
+            page.goto(f'{self.base_url}/select-cards', wait_until='networkidle')
+
+            page.fill('#search-input', 'zzzz-not-found')
+            page.wait_for_timeout(150)
+            self.assertTrue(page.locator('#gallery-empty-state').is_visible())
+            self.assertEqual(page.locator('#gallery-status').inner_text(), '0 cards shown')
+
+            page.click('#clear-gallery-filters')
+            page.wait_for_timeout(150)
+            self.assertFalse(page.locator('#gallery-empty-state').is_visible())
+            self.assertNotEqual(page.locator('#gallery-status').inner_text(), '0 cards shown')
+
+            page.goto(f'{self.base_url}/card-labels', wait_until='networkidle')
+            page.fill('#card-search', 'zzzz-not-found')
+            page.wait_for_timeout(150)
+            self.assertTrue(page.locator('#card-labels-empty-state').is_visible())
+            self.assertEqual(page.locator('#card-filter-status').inner_text(), '0 cards visible')
+
+            page.click('#clear-card-label-filters')
+            page.wait_for_timeout(150)
+            self.assertFalse(page.locator('#card-labels-empty-state').is_visible())
+            self.assertEqual(page.locator('#card-filter-status').inner_text(), '112 cards visible')
 
             browser.close()
 
@@ -233,7 +331,7 @@ class BrowserRegressionTestCase(unittest.TestCase):
                 }
                 """
             )
-            page.select_option('#filter-select', '1')
+            page.click('[data-label-id="1"]')
             page.wait_for_timeout(150)
             page.hover('#card-4')
 

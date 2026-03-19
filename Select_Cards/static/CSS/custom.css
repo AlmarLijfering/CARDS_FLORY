@@ -38,6 +38,16 @@
     opacity: 1;
 }
 
+.card:focus-visible,
+.selection-action-btn:focus-visible,
+.app-tile:focus-visible,
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, 0.4);
+    outline-offset: 2px;
+}
+
 .card img.small {
     width: 100%; /* Ensure the small image fits the card size */
     height: 100%;
@@ -90,6 +100,23 @@
     transform-origin: center right;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .card,
+    .app-tile,
+    .selection-action-btn {
+        transition: none;
+    }
+
+    .card:hover {
+        transform: none;
+        border: 1px solid #c7c7c7;
+    }
+
+    .app-tile:hover {
+        transform: none;
+    }
+}
+
 /* Disable zoom for cards in the dropzone */
 .dropzone .card:hover {
     transform: none; /* Disable zoom */
@@ -117,22 +144,48 @@
     content: attr(data-zone);
 }
 
-/* Styling for the remove button */
-.remove-btn {
+/* Styling for selection card controls */
+.selection-card-controls {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    background: red;
-    color: white;
-    border: none;
+    top: 6px;
+    left: 6px;
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+}
+
+.selection-action-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #17428a;
+    border: 1px solid #c7d6ef;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(32, 52, 84, 0.15);
+    padding: 0;
+}
+
+.selection-action-btn:hover:enabled {
+    background: #ffffff;
+    border-color: #0d6efd;
+}
+
+.selection-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.remove-btn {
+    background: rgba(255, 244, 245, 0.97);
+    color: #b42318;
+    border-color: #f0b9be;
 }
 
 /* Styling for placeholders in the available images section */
@@ -318,6 +371,20 @@ h5 {
     .mobile-hint {
         font-size: 0.9rem;
     }
+
+    .selection-card-controls {
+        top: 4px;
+        left: 4px;
+        gap: 3px;
+    }
+
+    .selection-action-btn {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        min-height: 24px;
+        font-size: 0.7rem;
+    }
 }
 
 .card-context-menu {
@@ -481,16 +548,71 @@ h5 {
     position: sticky;
     bottom: 0;
     background: linear-gradient(to top, #fff 70%, rgba(255, 255, 255, 0.85));
-    padding-top: 0.5rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.35rem;
+    border-top: 1px solid #edf1f7;
     z-index: 4;
 }
 
 .gallery-toolbar {
-    display: grid;
-    grid-template-columns: 1fr 180px auto;
-    gap: 0.5rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
     padding: 0.5rem;
+}
+
+.filter-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.filter-chip {
+    min-height: 40px;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid #cdd7ea;
+    border-radius: 999px;
+    background: #fff;
+    color: #23406d;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.1;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.filter-chip:hover {
+    border-color: #0d6efd;
+    background: #f4f8ff;
+}
+
+.filter-chip.is-active {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(13, 110, 253, 0.2);
+}
+
+.filter-chip:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, 0.28);
+    outline-offset: 2px;
+}
+
+.gallery-empty-state,
+.card-labels-empty-state {
+    margin: 0.5rem;
+    padding: 1rem;
+    border: 1px dashed #cfd8ea;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fcfdff 0%, #f5f8ff 100%);
+    text-align: left;
+}
+
+.gallery-empty-state[hidden],
+.card-labels-empty-state[hidden],
+#gallery-grid[hidden],
+#card-labels-table-wrapper[hidden],
+#card-labels-sticky-actions[hidden] {
+    display: none !important;
 }
 
 .selected-in-gallery {
@@ -543,7 +665,42 @@ h5 {
     .selection-actions {
         position: sticky;
         bottom: 0;
-        padding-bottom: 0.35rem;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+        margin-top: 0.5rem;
+    }
+
+    .selection-panel {
+        position: static;
+        box-shadow: none;
+    }
+
+    .selection-guidance-collapsed .selection-hint-text,
+    .selection-guidance-collapsed .selection-next-step,
+    .selection-guidance-collapsed .mobile-hint {
+        display: none !important;
+    }
+
+    .filter-chip-row {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0.15rem;
+    }
+
+    .filter-chip {
+        flex: 0 0 auto;
+        min-height: 42px;
+    }
+
+    .card-labels-toolbar {
+        position: static;
+    }
+
+    .card-labels-sticky-actions {
+        position: sticky;
+        bottom: 0;
+        padding-top: 0.75rem;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(to top, #fff 72%, rgba(255, 255, 255, 0.94));
     }
 }
 
@@ -617,10 +774,46 @@ h5 {
     bottom: 0;
     background: linear-gradient(to top, #fff 70%, rgba(255, 255, 255, 0.92));
     padding-top: 0.75rem;
+    z-index: 4;
 }
 
 @media (max-width: 991.98px) {
     .card-labels-toolbar-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.overview-card {
+    width: min(100%, 360px);
+    background: #fff;
+    border: 1px solid #dce5f4;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(35, 58, 98, 0.08);
+    overflow: hidden;
+}
+
+.overview-order-chip {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 0.75rem;
+    border-radius: 999px;
+    background: rgba(13, 110, 253, 0.92);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(13, 110, 253, 0.22);
+}
+
+.overview-card-meta {
+    padding: 0.7rem 0.9rem 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #465569;
+    text-align: center;
 }

@@ -66,7 +66,7 @@
               <div class="tile-image" aria-hidden="true">
                 <img src="{{ url_for('static', filename='Images/cards/Select Cards App Icon.png') }}" alt="">
               </div>
-              <h2 class="h5 mb-1">Select Cards</h2>
+              <h2 class="h5 mb-1">Open Select Cards</h2>
               <p class="small text-muted mb-0">
                 {% if select_cards_blocked %}
                 Currently blocked in configuration.
@@ -82,15 +82,9 @@
 
             <a class="app-tile text-decoration-none" href="{{ url_for('configuration_page') }}" aria-label="Open Configuration page">
               <div class="tile-icon" aria-hidden="true"><i class="bi bi-sliders"></i></div>
-              <h2 class="h5 mb-1">Configuration</h2>
+              <h2 class="h5 mb-1">Open Configuration</h2>
               <p class="small text-muted mb-0">Manage theme labels, card labels, and app access.</p>
             </a>
-
-            <div class="app-tile app-tile-tba" aria-label="Application to be announced">
-              <div class="tile-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></div>
-              <h2 class="h5 mb-1">TBA</h2>
-              <p class="small text-muted mb-0">To be announced.</p>
-            </div>
           </div>
         </div>
       </div>

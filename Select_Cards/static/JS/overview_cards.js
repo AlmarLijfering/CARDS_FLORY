@@ -6,7 +6,8 @@
   const translations = {
     en: {
       overviewHeading: 'Overview of Selected Cards',
-      newSelection: 'New Selection',
+      overviewHint: 'Confirm the order below before printing or sharing.',
+      editSelection: 'Edit Selection',
       printPdf: 'Print to PDF',
       noCardsSelected: 'No cards selected.',
       pageLabel: 'Page',
@@ -14,7 +15,8 @@
     },
     nl: {
       overviewHeading: 'Overzicht van geselecteerde kaarten',
-      newSelection: 'Nieuwe selectie',
+      overviewHint: 'Controleer hieronder de volgorde voordat je afdrukt of deelt.',
+      editSelection: 'Selectie bewerken',
       printPdf: 'Afdrukken naar pdf',
       noCardsSelected: 'Geen kaarten geselecteerd.',
       pageLabel: 'Pagina',
@@ -22,7 +24,8 @@
     },
     ro: {
       overviewHeading: 'Prezentare generala a cartilor selectate',
-      newSelection: 'Selectie noua',
+      overviewHint: 'Confirma ordinea de mai jos inainte de tiparire sau partajare.',
+      editSelection: 'Editeaza selectia',
       printPdf: 'Tipareste in PDF',
       noCardsSelected: 'Nu exista carti selectate.',
       pageLabel: 'Pagina',
