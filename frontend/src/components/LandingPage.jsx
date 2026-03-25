@@ -6,7 +6,7 @@ import { useAppState } from '../lib/app-state';
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const { config } = useAppState();
+  const { config, sessionPath } = useAppState();
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -20,7 +20,7 @@ export function LandingPage() {
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <Link
-            to="/select"
+            to={sessionPath}
             className={`surface-muted group flex min-h-56 flex-col justify-between p-6 transition ${
               config.selectCardsBlocked ? 'pointer-events-none opacity-60' : 'hover:-translate-y-1 hover:shadow-card'
             }`}

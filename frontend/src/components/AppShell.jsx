@@ -12,7 +12,7 @@ function navClassName(isActive) {
 
 
 export function AppShell({ children }) {
-  const { language, setLanguage } = useAppState();
+  const { finalizePath, language, sessionPath, setLanguage } = useAppState();
 
   return (
     <div className="min-h-screen px-4 py-5 md:px-6 lg:px-8">
@@ -28,11 +28,11 @@ export function AppShell({ children }) {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <nav className="flex flex-wrap gap-2">
-                <NavLink to="/" className={({ isActive }) => navClassName(isActive)}>
-                  Home
-                </NavLink>
-                <NavLink to="/select" className={({ isActive }) => navClassName(isActive)}>
+                <NavLink to={sessionPath} className={({ isActive }) => navClassName(isActive)}>
                   Session
+                </NavLink>
+                <NavLink to={finalizePath} className={({ isActive }) => navClassName(isActive)}>
+                  Finalize Session
                 </NavLink>
                 <NavLink to="/configuration" className={({ isActive }) => navClassName(isActive)}>
                   Configuration
@@ -60,4 +60,3 @@ export function AppShell({ children }) {
     </div>
   );
 }
-

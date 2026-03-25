@@ -1,16 +1,127 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import {
   DEFAULT_CONFIG,
   DEFAULT_THEME_LABELS,
   MAX_SELECTED_CARDS,
   STORAGE_KEYS,
-  SUPPORTED_LANGUAGES
+  SUPPORTED_LANGUAGES,
+  TOTAL_CARD_COUNT
 } from './constants';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
+import { useSessionStorageState } from '../hooks/useSessionStorageState';
 
 
 const AppStateContext = createContext(null);
+
+
+function createDefaultSessionState() {
+  return {
+    selectedCards: [],
+    sessionContext: {
+      sessionTitle: '',
+      facilitator: '',
+      clientAlias: '',
+      notes: ''
+    }
+  };
+}
+
+
+function sanitizeSessionKey(rawValue) {
+  const normalized = String(rawValue || 'default')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'default';
+}
+
+
+function sessionKeyFromPath(pathname) {
+  if (pathname === '/session' || pathname === '/session/' || pathname === '/session/finalize' || pathname === '/session/finalize/') {
+    return 'default';
+  }
+
+  const match = pathname.match(/^\/session\/([^/]+?)(?:\/finalize)?\/?$/);
+  if (!match) {
+    return 'default';
+  }
+
+  return sanitizeSessionKey(match[1]);
+}
+
+
+function buildSessionPath(sessionKey) {
+  return sessionKey === 'default' ? '/session' : `/session/${encodeURIComponent(sessionKey)}`;
+}
+
+
+function buildFinalizePath(sessionKey) {
+  return `${buildSessionPath(sessionKey)}/finalize`;
+}
+
+
+function normalizeSessionContext(rawContext) {
+  const defaults = createDefaultSessionState().sessionContext;
+  if (!rawContext || typeof rawContext !== 'object') {
+    return defaults;
+  }
+
+  return {
+    sessionTitle: typeof rawContext.sessionTitle === 'string' ? rawContext.sessionTitle : defaults.sessionTitle,
+    facilitator: typeof rawContext.facilitator === 'string' ? rawContext.facilitator : defaults.facilitator,
+    clientAlias: typeof rawContext.clientAlias === 'string' ? rawContext.clientAlias : defaults.clientAlias,
+    notes: typeof rawContext.notes === 'string' ? rawContext.notes : defaults.notes
+  };
+}
+
+
+function normalizeSessionState(rawSession) {
+  const defaults = createDefaultSessionState();
+  if (!rawSession || typeof rawSession !== 'object') {
+    return defaults;
+  }
+
+  const selectedCards = Array.isArray(rawSession.selectedCards) ? rawSession.selectedCards : [];
+  const normalizedCards = [];
+  const seen = new Set();
+  for (const rawCardId of selectedCards) {
+    const parsed = Number(rawCardId);
+    if (
+      !Number.isInteger(parsed)
+      || parsed < 1
+      || parsed > TOTAL_CARD_COUNT
+      || seen.has(parsed)
+      || normalizedCards.length >= MAX_SELECTED_CARDS
+    ) {
+      continue;
+    }
+    seen.add(parsed);
+    normalizedCards.push(parsed);
+  }
+
+  return {
+    selectedCards: normalizedCards,
+    sessionContext: normalizeSessionContext(rawSession.sessionContext)
+  };
+}
+
+
+function normalizeSessions(rawSessions) {
+  const normalized = {};
+  if (!rawSessions || typeof rawSessions !== 'object') {
+    return normalized;
+  }
+
+  for (const [sessionKey, sessionState] of Object.entries(rawSessions)) {
+    normalized[sanitizeSessionKey(sessionKey)] = normalizeSessionState(sessionState);
+  }
+
+  return normalized;
+}
 
 
 function cloneThemeLabels(themeLabels = DEFAULT_THEME_LABELS) {
@@ -103,16 +214,17 @@ function arrayMove(items, fromIndex, toIndex) {
 
 
 export function AppStateProvider({ children }) {
+  const location = useLocation();
+  const activeSessionKey = sessionKeyFromPath(location.pathname);
   const [config, setConfig] = useLocalStorageState(STORAGE_KEYS.config, DEFAULT_CONFIG, normalizeConfig);
   const [language, setLanguage] = useLocalStorageState(STORAGE_KEYS.language, 'en', normalizeLanguage);
   const [guidanceDismissed, setGuidanceDismissed] = useLocalStorageState(STORAGE_KEYS.guidance, false, Boolean);
-  const [selectedCards, setSelectedCards] = useState([]);
-  const [sessionContext, setSessionContext] = useState({
-    sessionTitle: '',
-    facilitator: '',
-    clientAlias: '',
-    notes: ''
-  });
+  const [sessions, setSessions] = useSessionStorageState(STORAGE_KEYS.sessions, {}, normalizeSessions);
+
+  const activeSession = sessions[activeSessionKey] || createDefaultSessionState();
+
+  const selectedCards = activeSession.selectedCards;
+  const sessionContext = activeSession.sessionContext;
 
   useEffect(() => {
     if (!SUPPORTED_LANGUAGES.includes(language)) {
@@ -124,6 +236,19 @@ export function AppStateProvider({ children }) {
     setConfig((current) => {
       const nextConfig = typeof updater === 'function' ? updater(current) : updater;
       return normalizeConfig(nextConfig);
+    });
+  }
+
+  function updateActiveSession(updater) {
+    setSessions((current) => {
+      const normalizedSessions = normalizeSessions(current);
+      const currentSession = normalizedSessions[activeSessionKey] || createDefaultSessionState();
+      const nextSession = typeof updater === 'function' ? updater(currentSession) : updater;
+
+      return {
+        ...normalizedSessions,
+        [activeSessionKey]: normalizeSessionState(nextSession)
+      };
     });
   }
 
@@ -149,51 +274,57 @@ export function AppStateProvider({ children }) {
   }
 
   function addSelectedCard(cardId, preferredIndex = selectedCards.length) {
-    setSelectedCards((current) => {
-      if (current.includes(cardId) || current.length >= MAX_SELECTED_CARDS) {
+    updateActiveSession((current) => {
+      if (current.selectedCards.includes(cardId) || current.selectedCards.length >= MAX_SELECTED_CARDS) {
         return current;
       }
-      const next = [...current];
-      const insertionIndex = Math.max(0, Math.min(preferredIndex, next.length));
-      next.splice(insertionIndex, 0, cardId);
-      return next;
+      const nextCards = [...current.selectedCards];
+      const insertionIndex = Math.max(0, Math.min(preferredIndex, nextCards.length));
+      nextCards.splice(insertionIndex, 0, cardId);
+      return {
+        ...current,
+        selectedCards: nextCards
+      };
     });
     setGuidanceDismissed(true);
   }
 
   function removeSelectedCard(cardId) {
-    setSelectedCards((current) => current.filter((value) => value !== cardId));
+    updateActiveSession((current) => ({
+      ...current,
+      selectedCards: current.selectedCards.filter((value) => value !== cardId)
+    }));
   }
 
   function reorderSelectedCards(fromIndex, toIndex) {
-    setSelectedCards((current) => {
+    updateActiveSession((current) => {
       if (
         fromIndex === toIndex
         || fromIndex < 0
         || toIndex < 0
-        || fromIndex >= current.length
-        || toIndex >= current.length
+        || fromIndex >= current.selectedCards.length
+        || toIndex >= current.selectedCards.length
       ) {
         return current;
       }
-      return arrayMove(current, fromIndex, toIndex);
+      return {
+        ...current,
+        selectedCards: arrayMove(current.selectedCards, fromIndex, toIndex)
+      };
     });
   }
 
   function clearSelection() {
-    setSelectedCards([]);
-    setSessionContext({
-      sessionTitle: '',
-      facilitator: '',
-      clientAlias: '',
-      notes: ''
-    });
+    updateActiveSession(createDefaultSessionState());
   }
 
   function updateSessionContext(patch) {
-    setSessionContext((current) => ({
+    updateActiveSession((current) => ({
       ...current,
-      ...patch
+      sessionContext: {
+        ...current.sessionContext,
+        ...patch
+      }
     }));
   }
 
@@ -243,6 +374,9 @@ export function AppStateProvider({ children }) {
   }
 
   const value = {
+    activeSessionKey,
+    sessionPath: buildSessionPath(activeSessionKey),
+    finalizePath: buildFinalizePath(activeSessionKey),
     config,
     language,
     setLanguage,
@@ -276,4 +410,3 @@ export function useAppState() {
   }
   return context;
 }
-

@@ -23,6 +23,6 @@ export const LANGUAGE_LABELS = {
 export const STORAGE_KEYS = {
   config: 'therapy-cards-config-v1',
   language: 'therapy-cards-language-v1',
-  guidance: 'therapy-cards-guidance-v1'
+  guidance: 'therapy-cards-guidance-v1',
+  sessions: 'therapy-cards-session-state-v1'
 };
-

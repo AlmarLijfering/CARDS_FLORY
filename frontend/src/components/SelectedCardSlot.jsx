@@ -15,14 +15,14 @@ export function EmptySelectionSlot({ index }) {
   return (
     <div
       ref={setNodeRef}
-      className={`ghost-grid flex min-h-40 items-center justify-center rounded-[24px] border-2 border-dashed px-4 py-6 text-center transition ${
+      className={`ghost-grid flex min-h-32 items-center justify-center rounded-[22px] border-2 border-dashed px-3 py-4 text-center transition ${
         isOver ? 'border-brand-500 bg-brand-50' : 'border-slate-300/80 bg-white/50'
       }`}
       aria-label={`Selection slot ${index + 1} is empty`}
     >
       <div>
         <p className="text-sm font-semibold text-slate-700">Slot {index + 1}</p>
-        <p className="mt-1 text-xs text-slate-500">Drop a card here or use Enter on the gallery.</p>
+        <p className="mt-1 text-[11px] text-slate-500">Drop or click to fill</p>
       </div>
     </div>
   );
@@ -45,20 +45,14 @@ export function SelectedCardSlot({ card, index, totalSelected, labelNames, onMov
   };
 
   return (
-    <article ref={setNodeRef} style={style} className="surface-muted flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">
-            {index + 1}
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">{card.title}</h3>
-            <p className="text-xs text-slate-500">Card #{card.id}</p>
-          </div>
-        </div>
+    <article ref={setNodeRef} style={style} className="surface-muted flex min-w-0 flex-col gap-2 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-semibold text-white">
+          {index + 1}
+        </span>
         <button
           type="button"
-          className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
+          className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600"
           aria-label={`Drag card ${card.id}`}
           {...attributes}
           {...listeners}
@@ -66,30 +60,35 @@ export function SelectedCardSlot({ card, index, totalSelected, labelNames, onMov
           Drag
         </button>
       </div>
-      <div className="overflow-hidden rounded-[20px] bg-slate-100">
-        <img src={card.largeImage} alt={card.title} className="aspect-square w-full object-cover" />
+      <div className="overflow-hidden rounded-[18px] bg-slate-100">
+        <img src={card.largeImage} alt={card.title} className="aspect-[4/5] w-full object-cover" />
       </div>
-      <p className="text-xs text-slate-500">{labelNames.length ? labelNames.join(' • ') : 'No labels assigned yet'}</p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-semibold text-slate-900">{card.title}</p>
+        <p className="truncate text-[11px] text-slate-500">
+          {labelNames.length ? labelNames.join(' • ') : `Card #${card.id}`}
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
         <button
           type="button"
-          className="min-h-11 rounded-2xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"
+          className="min-h-9 rounded-2xl border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"
           onClick={() => onMove(index, index - 1)}
           disabled={index === 0}
         >
-          Earlier
+          Left
         </button>
         <button
           type="button"
-          className="min-h-11 rounded-2xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"
+          className="min-h-9 rounded-2xl border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"
           onClick={() => onMove(index, index + 1)}
           disabled={index >= totalSelected - 1}
         >
-          Later
+          Right
         </button>
         <button
           type="button"
-          className="min-h-11 rounded-2xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700"
+          className="min-h-9 rounded-2xl border border-rose-200 bg-rose-50 px-2 text-[11px] font-semibold text-rose-700"
           onClick={() => onRemove(card.id)}
         >
           Remove

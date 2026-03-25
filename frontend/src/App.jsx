@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppStateProvider } from './lib/app-state';
 import { AppShell } from './components/AppShell';
@@ -39,8 +39,12 @@ export default function App() {
               <Route path="/configuration" element={<ConfigurationPage />} />
               <Route path="/configuration/themes" element={<ThemeLabelsPage />} />
               <Route path="/configuration/card-labels" element={<CardLabelsPage />} />
-              <Route path="/select" element={<SelectCardsPage />} />
-              <Route path="/overview" element={<OverviewPage />} />
+              <Route path="/session" element={<SelectCardsPage />} />
+              <Route path="/session/finalize" element={<OverviewPage />} />
+              <Route path="/session/:sessionKey" element={<SelectCardsPage />} />
+              <Route path="/session/:sessionKey/finalize" element={<OverviewPage />} />
+              <Route path="/select" element={<Navigate to="/session" replace />} />
+              <Route path="/overview" element={<Navigate to="/session/finalize" replace />} />
             </Routes>
           </Suspense>
         </AppShell>
