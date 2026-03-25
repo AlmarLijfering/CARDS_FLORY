@@ -10,6 +10,8 @@ import urllib.error
 import urllib.request
 from datetime import UTC, datetime, timedelta
 
+from app.services.session_registry_service import get_active_session, register_active_session
+
 
 DEFAULT_LINK_TTL_HOURS = 24
 
@@ -120,6 +122,7 @@ def create_session_link(hours: int = DEFAULT_LINK_TTL_HOURS) -> dict[str, str | 
     }
     payload_bytes = json.dumps(payload, separators=(',', ':'), sort_keys=True).encode('utf-8')
     token = f'{_base64url_encode(payload_bytes)}.{_token_signature(payload_bytes)}'
+    register_active_session(session_key, expires_at.isoformat())
     long_url = _invite_url(token)
     short_url = _shorten_with_tinyurl(long_url) or long_url
 
@@ -166,7 +169,9 @@ def verify_session_link(token: str) -> dict[str, str]:
     if expiry < datetime.now(UTC):
         raise LookupError('This session link has expired.')
 
+    active_session = get_active_session(session_key)
+
     return {
-        'session_key': session_key,
-        'expires_at': expiry.isoformat(),
+        'session_key': active_session['session_key'],
+        'expires_at': active_session['expires_at'],
     }

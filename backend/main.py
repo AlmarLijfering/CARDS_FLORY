@@ -8,12 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from app.models import (
+    ClearSessionsResponse,
+    LoginRequest,
+    LoginResponse,
     PdfGenerationRequest,
+    SessionStatusResponse,
     SessionLinkCreateResponse,
     SessionLinkVerificationResponse,
 )
 from app.services.pdf_service import build_pdf
 from app.services.session_link_service import create_session_link, verify_session_link
+from app.services.session_registry_service import clear_active_sessions, get_active_session
 
 
 def _allowed_origins() -> list[str]:
@@ -44,6 +49,14 @@ def _report_filename(session_title: str | None) -> str:
     return f'{sanitized or "therapy-card-overview"}.pdf'
 
 
+def _configured_login_credentials() -> tuple[str, str] | None:
+    username = os.environ.get('User_Name', '').strip()
+    password = os.environ.get('Password', '').strip()
+    if not username or not password:
+        return None
+    return username, password
+
+
 app = FastAPI(
     title='Therapy Cards PDF Service',
     version='1.0.0',
@@ -62,6 +75,19 @@ app.add_middleware(
 @app.get('/api/health')
 async def healthcheck():
     return {'status': 'ok'}
+
+
+@app.post('/api/auth/login', response_model=LoginResponse)
+async def login(payload: LoginRequest):
+    credentials = _configured_login_credentials()
+    if credentials is None:
+        raise HTTPException(status_code=503, detail='Configuration login is not configured on the backend.')
+
+    expected_username, expected_password = credentials
+    if payload.username != expected_username or payload.password != expected_password:
+        raise HTTPException(status_code=401, detail='Invalid username or password.')
+
+    return {'ok': True}
 
 
 @app.post('/api/generate-pdf')
@@ -85,6 +111,19 @@ async def validate_session_link(token: str):
         raise HTTPException(status_code=410, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get('/api/sessions/{session_key}', response_model=SessionStatusResponse)
+async def get_session_status(session_key: str):
+    try:
+        return get_active_session(session_key)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.delete('/api/sessions', response_model=ClearSessionsResponse)
+async def clear_sessions():
+    return {'cleared_count': clear_active_sessions()}
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { cardCatalog } from '../data/cardCatalog';
 import { buildPdfPayload } from '../lib/insights';
 import { useAppState } from '../lib/app-state';
+import { useSessionAccessGuard } from '../hooks/useSessionAccessGuard';
 import { downloadPdf } from '../lib/pdfApi';
 import { EmptyState } from './EmptyState';
 
@@ -19,6 +20,7 @@ export function OverviewPage() {
     sessionPath,
     updateSessionContext
   } = useAppState();
+  const { errorMessage: sessionError, isChecking } = useSessionAccessGuard();
   const [isPrinting, setIsPrinting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -29,6 +31,22 @@ export function OverviewPage() {
         description="This session link is currently disabled in local configuration, so finalize and print are unavailable."
         actionLabel="Open configuration"
         onAction={() => navigate('/configuration')}
+        tone="warning"
+      />
+    );
+  }
+
+  if (isChecking) {
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Opening session...</section>;
+  }
+
+  if (activeSessionKey !== 'default' && sessionError) {
+    return (
+      <EmptyState
+        title="Session unavailable"
+        description={sessionError}
+        actionLabel="Back to home"
+        onAction={() => navigate('/')}
         tone="warning"
       />
     );

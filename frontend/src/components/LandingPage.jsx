@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { EmptyState } from './EmptyState';
 import { useAppState } from '../lib/app-state';
+import { loginWithBackend } from '../lib/authApi';
 
 
 export function LandingPage() {
@@ -11,12 +12,24 @@ export function LandingPage() {
   const { config, isAuthenticated, login, logout, sessionPath } = useAppState();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const redirectTarget = typeof location.state?.from === 'string' ? location.state.from : '/configuration';
 
-  function handleLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault();
-    login();
-    navigate(redirectTarget, { replace: true });
+    setIsSubmitting(true);
+    setLoginError('');
+
+    try {
+      await loginWithBackend(username, password);
+      login();
+      navigate(redirectTarget, { replace: true });
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Unable to log in.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -68,9 +81,7 @@ export function LandingPage() {
           </div>
         ) : (
           <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <p className="text-sm leading-7 text-slate-600">
-              Login is used only to unlock configuration in this browser. Username and password are not validated yet.
-            </p>
+            <p className="text-sm leading-7 text-slate-600">Login is required to unlock configuration on this device.</p>
             <label className="block text-sm font-semibold text-slate-700">
               Username
               <input
@@ -91,8 +102,9 @@ export function LandingPage() {
                 autoComplete="current-password"
               />
             </label>
-            <button type="submit" className="action-chip action-chip-active">
-              Login
+            {loginError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{loginError}</div> : null}
+            <button type="submit" className="action-chip action-chip-active" disabled={isSubmitting}>
+              {isSubmitting ? 'Logging in...' : 'Login'}
             </button>
           </form>
         )}

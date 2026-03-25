@@ -340,6 +340,10 @@ export function AppStateProvider({ children }) {
     updateActiveSession(createDefaultSessionState());
   }
 
+  function clearAllSessions() {
+    setSessions({});
+  }
+
   function updateSessionContext(patch) {
     updateActiveSession((current) => ({
       ...current,
@@ -416,6 +420,7 @@ export function AppStateProvider({ children }) {
     removeSelectedCard,
     reorderSelectedCards,
     clearSelection,
+    clearAllSessions,
     updateSessionContext,
     getThemeLabels,
     getCardLabelIds,

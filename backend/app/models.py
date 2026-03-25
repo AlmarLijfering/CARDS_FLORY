@@ -132,3 +132,37 @@ class SessionLinkVerificationResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
+
+
+class SessionStatusResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    session_key: str = Field(..., min_length=1, max_length=80)
+    expires_at: str = Field(..., min_length=1, max_length=64)
+
+
+class ClearSessionsResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    cleared_count: int = Field(..., ge=0)
+
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    username: str = Field(..., min_length=1, max_length=120)
+    password: str = Field(..., min_length=1, max_length=120)
+
+    @field_validator('username', 'password')
+    @classmethod
+    def validate_credentials(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError('Credentials cannot be blank')
+        return normalized
+
+
+class LoginResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    ok: bool = True

@@ -15,6 +15,7 @@ import { rectSortingStrategy, sortableKeyboardCoordinates, SortableContext } fro
 import { cardCatalog } from '../data/cardCatalog';
 import { MAX_SELECTED_CARDS } from '../lib/constants';
 import { useAppState } from '../lib/app-state';
+import { useSessionAccessGuard } from '../hooks/useSessionAccessGuard';
 import { CardTile } from './CardTile';
 import { EmptyState } from './EmptyState';
 import { EmptySelectionSlot, SelectedCardSlot } from './SelectedCardSlot';
@@ -37,6 +38,7 @@ function SelectedDropzone({ children, isOver, setNodeRef }) {
 export function SelectCardsPage() {
   const navigate = useNavigate();
   const {
+    activeSessionKey,
     config,
     finalizePath,
     selectedCards,
@@ -47,6 +49,7 @@ export function SelectCardsPage() {
     getThemeLabels,
     getCardLabelIds
   } = useAppState();
+  const { errorMessage: sessionError, isChecking } = useSessionAccessGuard();
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeCardId, setActiveCardId] = useState(() => cardCatalog[0]?.id ?? null);
@@ -255,6 +258,22 @@ export function SelectCardsPage() {
         description="This direct session link is disabled in local configuration, so the session workspace will not open until it is unblocked."
         actionLabel="Open configuration"
         onAction={() => navigate('/configuration')}
+        tone="warning"
+      />
+    );
+  }
+
+  if (isChecking) {
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Opening session...</section>;
+  }
+
+  if (activeSessionKey !== 'default' && sessionError) {
+    return (
+      <EmptyState
+        title="Session unavailable"
+        description={sessionError}
+        actionLabel="Back to home"
+        onAction={() => navigate('/')}
         tone="warning"
       />
     );

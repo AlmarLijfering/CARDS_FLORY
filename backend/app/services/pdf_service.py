@@ -15,9 +15,10 @@ from app.models import PdfGenerationRequest, SelectedCard
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 CARD_ASSET_DIR = ROOT_DIR / 'frontend' / 'public' / 'cards'
-CARD_IMAGE_SIZE = 4.85 * cm
-MAX_NOTES_CHARS = 700
-MAX_NOTES_LINES = 8
+CARD_IMAGE_WIDTH = 5.9 * cm
+CARD_IMAGE_HEIGHT = 7.35 * cm
+MAX_NOTES_CHARS = 500
+MAX_NOTES_LINES = 6
 
 
 def _create_styles():
@@ -27,10 +28,10 @@ def _create_styles():
             name='OverviewTitle',
             parent=styles['Heading1'],
             fontName='Helvetica-Bold',
-            fontSize=20,
-            leading=24,
+            fontSize=18,
+            leading=21,
             textColor=colors.HexColor('#0f172a'),
-            spaceAfter=8,
+            spaceAfter=6,
         )
     )
     styles.add(
@@ -38,8 +39,8 @@ def _create_styles():
             name='CardCaption',
             parent=styles['BodyText'],
             fontName='Helvetica-Bold',
-            fontSize=9.5,
-            leading=11.5,
+            fontSize=9,
+            leading=10.5,
             alignment=1,
             textColor=colors.HexColor('#0f172a'),
         )
@@ -49,10 +50,10 @@ def _create_styles():
             name='NotesLabel',
             parent=styles['BodyText'],
             fontName='Helvetica-Bold',
-            fontSize=10.5,
-            leading=13,
+            fontSize=10,
+            leading=12,
             textColor=colors.HexColor('#0f172a'),
-            spaceAfter=5,
+            spaceAfter=4,
         )
     )
     styles.add(
@@ -60,8 +61,8 @@ def _create_styles():
             name='NotesBody',
             parent=styles['BodyText'],
             fontName='Helvetica',
-            fontSize=9.2,
-            leading=12,
+            fontSize=8.8,
+            leading=11,
             textColor=colors.HexColor('#334155'),
         )
     )
@@ -76,11 +77,11 @@ def _build_card_image(card_id: int):
     image_path = _card_image_path(card_id)
     if image_path.exists():
         image = Image(str(image_path))
-        image.drawWidth = CARD_IMAGE_SIZE
-        image.drawHeight = CARD_IMAGE_SIZE
+        image.drawWidth = CARD_IMAGE_WIDTH
+        image.drawHeight = CARD_IMAGE_HEIGHT
         return image
 
-    fallback = Table([['Image unavailable']], colWidths=[CARD_IMAGE_SIZE], rowHeights=[CARD_IMAGE_SIZE])
+    fallback = Table([['Image unavailable']], colWidths=[CARD_IMAGE_WIDTH], rowHeights=[CARD_IMAGE_HEIGHT])
     fallback.setStyle(
         TableStyle(
             [
@@ -98,12 +99,32 @@ def _build_card_image(card_id: int):
 
 
 def _build_card_cell(card: SelectedCard, slot_number: int, styles):
+    framed_image = Table(
+        [[_build_card_image(card.id)]],
+        colWidths=[CARD_IMAGE_WIDTH + 0.35 * cm],
+        rowHeights=[CARD_IMAGE_HEIGHT + 0.35 * cm],
+    )
+    framed_image.setStyle(
+        TableStyle(
+            [
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e1')),
+                ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]
+        )
+    )
+
     cell = Table(
         [
-            [_build_card_image(card.id)],
-            [Paragraph(f'{slot_number}. Card #{card.id:03d}', styles['CardCaption'])],
+            [framed_image],
+            [Paragraph(f'Slot {slot_number} • Card #{card.id:03d}', styles['CardCaption'])],
         ],
-        colWidths=[CARD_IMAGE_SIZE + 0.2 * cm],
+        colWidths=[CARD_IMAGE_WIDTH + 0.7 * cm],
     )
     cell.setStyle(
         TableStyle(
@@ -130,7 +151,7 @@ def _build_cards_grid(selected_cards: list[SelectedCard], styles) -> Table:
     if not rows:
         rows = [['', '']]
 
-    grid = Table(rows, colWidths=[8.9 * cm, 8.9 * cm], hAlign='CENTER')
+    grid = Table(rows, colWidths=[9.55 * cm, 9.55 * cm], hAlign='CENTER')
     grid.setStyle(
         TableStyle(
             [
@@ -139,7 +160,7 @@ def _build_cards_grid(selected_cards: list[SelectedCard], styles) -> Table:
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
             ]
         )
     )
@@ -177,19 +198,19 @@ def build_pdf(payload: PdfGenerationRequest) -> bytes:
     document = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=1.1 * cm,
-        rightMargin=1.1 * cm,
-        topMargin=1.0 * cm,
-        bottomMargin=1.0 * cm,
+        leftMargin=0.55 * cm,
+        rightMargin=0.55 * cm,
+        topMargin=0.5 * cm,
+        bottomMargin=0.5 * cm,
         title='Therapy Card Reflection Overview',
         author='Therapy Cards App',
     )
 
     story = [
         Paragraph('Therapy Card Reflection Overview', styles['OverviewTitle']),
-        Spacer(1, 0.15 * cm),
+        Spacer(1, 0.05 * cm),
         _build_cards_grid(payload.selected_cards, styles),
-        Spacer(1, 0.35 * cm),
+        Spacer(1, 0.15 * cm),
         Paragraph('Notes:', styles['NotesLabel']),
         _notes_paragraph(payload.context.notes, styles),
     ]
