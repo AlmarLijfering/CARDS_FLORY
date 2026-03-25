@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AppStateProvider } from './lib/app-state';
 import { useAppState } from './lib/app-state';
@@ -21,6 +21,9 @@ const SelectCardsPage = lazy(() =>
 const OverviewPage = lazy(() =>
   import('./components/OverviewPage').then((module) => ({ default: module.OverviewPage })),
 );
+const SessionInvitePage = lazy(() =>
+  import('./components/SessionInvitePage').then((module) => ({ default: module.SessionInvitePage })),
+);
 
 
 function ProtectedConfigurationRoute({ children }) {
@@ -37,7 +40,7 @@ function ProtectedConfigurationRoute({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppStateProvider>
         <AppShell>
           <Suspense
@@ -77,6 +80,7 @@ export default function App() {
               <Route path="/session/finalize" element={<OverviewPage />} />
               <Route path="/session/:sessionKey" element={<SelectCardsPage />} />
               <Route path="/session/:sessionKey/finalize" element={<OverviewPage />} />
+              <Route path="/invite/:accessToken" element={<SessionInvitePage />} />
               <Route path="/select" element={<Navigate to="/session" replace />} />
               <Route path="/overview" element={<Navigate to="/session/finalize" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
@@ -84,6 +88,6 @@ export default function App() {
           </Suspense>
         </AppShell>
       </AppStateProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

@@ -1,10 +1,46 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppState } from '../lib/app-state';
+import { createSessionLink } from '../lib/sessionLinksApi';
 
 
 export function ConfigurationPage() {
   const { config, setSelectCardsBlocked } = useAppState();
+  const [sessionLink, setSessionLink] = useState(null);
+  const [isCreatingLink, setIsCreatingLink] = useState(false);
+  const [linkError, setLinkError] = useState('');
+  const [copyLabel, setCopyLabel] = useState('Copy link');
+
+  async function handleCreateSessionLink() {
+    setIsCreatingLink(true);
+    setLinkError('');
+    setCopyLabel('Copy link');
+
+    try {
+      const result = await createSessionLink();
+      setSessionLink(result);
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : 'Unable to create a session link.');
+    } finally {
+      setIsCreatingLink(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!sessionLink?.short_url) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(sessionLink.short_url);
+      setCopyLabel('Copied');
+      window.setTimeout(() => setCopyLabel('Copy link'), 1800);
+    } catch (error) {
+      setCopyLabel('Copy failed');
+      window.setTimeout(() => setCopyLabel('Copy link'), 1800);
+    }
+  }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -29,6 +65,53 @@ export function ConfigurationPage() {
             </p>
           </div>
         </label>
+
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 px-5 py-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Create 24-hour session link</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Generate a unique client session URL that expires after 24 hours. If TinyURL is configured on the backend, the shared link will be shortened automatically.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="action-chip action-chip-active"
+              onClick={handleCreateSessionLink}
+              disabled={isCreatingLink}
+            >
+              {isCreatingLink ? 'Creating...' : 'Create session URL'}
+            </button>
+          </div>
+
+          {linkError ? (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {linkError}
+            </div>
+          ) : null}
+
+          {sessionLink ? (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
+              <p>
+                <span className="font-semibold text-slate-900">Expires:</span> {new Date(sessionLink.expires_at).toLocaleString()}
+              </p>
+              <p className="mt-2 break-all">
+                <span className="font-semibold text-slate-900">Share URL:</span> {sessionLink.short_url}
+              </p>
+              {!sessionLink.used_tinyurl ? (
+                <p className="mt-2 text-slate-500">TinyURL is not configured, so the direct invite link is shown instead.</p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button type="button" className="action-chip" onClick={handleCopyLink}>
+                  {copyLabel}
+                </button>
+                <a className="action-chip" href={sessionLink.short_url} target="_blank" rel="noreferrer">
+                  Open link
+                </a>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
       <section className="grid gap-4 md:grid-cols-2">
         <Link
@@ -63,4 +146,3 @@ export function ConfigurationPage() {
     </div>
   );
 }
-

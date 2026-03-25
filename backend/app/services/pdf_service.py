@@ -15,9 +15,9 @@ from app.models import PdfGenerationRequest, SelectedCard
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 CARD_ASSET_DIR = ROOT_DIR / 'frontend' / 'public' / 'cards'
-CARD_IMAGE_SIZE = 5.15 * cm
-MAX_NOTES_CHARS = 900
-MAX_NOTES_LINES = 10
+CARD_IMAGE_SIZE = 4.85 * cm
+MAX_NOTES_CHARS = 700
+MAX_NOTES_LINES = 8
 
 
 def _create_styles():
@@ -121,16 +121,16 @@ def _build_card_cell(card: SelectedCard, slot_number: int, styles):
 def _build_cards_grid(selected_cards: list[SelectedCard], styles) -> Table:
     cells = [_build_card_cell(card, index, styles) for index, card in enumerate(selected_cards[:6], start=1)]
     rows = []
-    for start_index in range(0, len(cells), 3):
-        row = cells[start_index:start_index + 3]
-        while len(row) < 3:
+    for start_index in range(0, len(cells), 2):
+        row = cells[start_index:start_index + 2]
+        while len(row) < 2:
             row.append('')
         rows.append(row)
 
     if not rows:
-        rows = [['', '', '']]
+        rows = [['', '']]
 
-    grid = Table(rows, colWidths=[6.0 * cm, 6.0 * cm, 6.0 * cm], hAlign='CENTER')
+    grid = Table(rows, colWidths=[8.9 * cm, 8.9 * cm], hAlign='CENTER')
     grid.setStyle(
         TableStyle(
             [

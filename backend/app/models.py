@@ -115,3 +115,20 @@ class PdfGenerationRequest(BaseModel):
                 raise ValueError('Duplicate selected card ids are not allowed')
             seen.add(card.id)
         return self
+
+
+class SessionLinkCreateResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    session_key: str = Field(..., min_length=1, max_length=80)
+    expires_at: str = Field(..., min_length=1, max_length=64)
+    long_url: str = Field(..., min_length=1, max_length=500)
+    short_url: str = Field(..., min_length=1, max_length=500)
+    used_tinyurl: bool = False
+
+
+class SessionLinkVerificationResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    session_key: str = Field(..., min_length=1, max_length=80)
+    expires_at: str = Field(..., min_length=1, max_length=64)

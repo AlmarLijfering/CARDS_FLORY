@@ -10,6 +10,14 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: FRONTEND_APP_URL
+        sync: false
+      - key: SESSION_LINK_SECRET
+        sync: false
+      - key: TINYURL_API_TOKEN
+        sync: false
+      - key: TINYURL_DOMAIN
+        sync: false
   - type: static
     name: therapy-cards-web
     rootDir: frontend
