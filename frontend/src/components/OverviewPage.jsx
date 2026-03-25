@@ -75,7 +75,7 @@ export function OverviewPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="eyebrow">Finalize Session</p>
-          <h2 className="page-title mt-2">Review cards and add session notes.</h2>
+          <h2 className="page-title mt-2">Selected cards</h2>
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="button" className="action-chip" onClick={() => navigate(sessionPath)}>
@@ -94,14 +94,14 @@ export function OverviewPage() {
       ) : null}
 
       <div className="mt-5 rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
-        <label className="mt-4 block text-sm font-semibold text-slate-700">
-          Add notes for the selection
+        <label className="block text-sm text-slate-700">
+          <span className="font-semibold text-slate-900">Notes:</span>
           <textarea
             value={sessionContext.notes}
             onChange={(event) => updateSessionContext({ notes: event.target.value })}
             rows={6}
             className="mt-2 w-full rounded-[24px] border border-slate-300 bg-white px-4 py-3 text-sm"
-            placeholder="Add notes related to the selected cards"
+            placeholder="Add notes here"
           />
         </label>
       </div>

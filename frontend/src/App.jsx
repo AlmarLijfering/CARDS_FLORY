@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AppStateProvider } from './lib/app-state';
+import { useAppState } from './lib/app-state';
 import { AppShell } from './components/AppShell';
 
 const LandingPage = lazy(() => import('./components/LandingPage').then((module) => ({ default: module.LandingPage })));
@@ -22,6 +23,18 @@ const OverviewPage = lazy(() =>
 );
 
 
+function ProtectedConfigurationRoute({ children }) {
+  const location = useLocation();
+  const { isAuthenticated } = useAppState();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  }
+
+  return children;
+}
+
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -36,15 +49,37 @@ export default function App() {
           >
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/configuration" element={<ConfigurationPage />} />
-              <Route path="/configuration/themes" element={<ThemeLabelsPage />} />
-              <Route path="/configuration/card-labels" element={<CardLabelsPage />} />
+              <Route
+                path="/configuration"
+                element={
+                  <ProtectedConfigurationRoute>
+                    <ConfigurationPage />
+                  </ProtectedConfigurationRoute>
+                }
+              />
+              <Route
+                path="/configuration/themes"
+                element={
+                  <ProtectedConfigurationRoute>
+                    <ThemeLabelsPage />
+                  </ProtectedConfigurationRoute>
+                }
+              />
+              <Route
+                path="/configuration/card-labels"
+                element={
+                  <ProtectedConfigurationRoute>
+                    <CardLabelsPage />
+                  </ProtectedConfigurationRoute>
+                }
+              />
               <Route path="/session" element={<SelectCardsPage />} />
               <Route path="/session/finalize" element={<OverviewPage />} />
               <Route path="/session/:sessionKey" element={<SelectCardsPage />} />
               <Route path="/session/:sessionKey/finalize" element={<OverviewPage />} />
               <Route path="/select" element={<Navigate to="/session" replace />} />
               <Route path="/overview" element={<Navigate to="/session/finalize" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </AppShell>

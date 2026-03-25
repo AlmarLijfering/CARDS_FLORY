@@ -4,11 +4,11 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8001').replac
 function readFilename(headers) {
   const disposition = headers.get('content-disposition');
   if (!disposition) {
-    return 'therapy-card-report.pdf';
+    return 'therapy-card-overview.pdf';
   }
 
   const match = disposition.match(/filename="?([^"]+)"?/i);
-  return match?.[1] || 'therapy-card-report.pdf';
+  return match?.[1] || 'therapy-card-overview.pdf';
 }
 
 
@@ -37,4 +37,3 @@ export async function downloadPdf(payload) {
   anchor.remove();
   window.URL.revokeObjectURL(objectUrl);
 }
-

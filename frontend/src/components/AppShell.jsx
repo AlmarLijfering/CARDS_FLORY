@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 import { LANGUAGE_LABELS } from '../lib/constants';
 import { useAppState } from '../lib/app-state';
@@ -12,7 +12,13 @@ function navClassName(isActive) {
 
 
 export function AppShell({ children }) {
-  const { finalizePath, language, sessionPath, setLanguage } = useAppState();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { finalizePath, isAuthenticated, language, logout, sessionPath, setLanguage } = useAppState();
+  const isConfigurationRoute = location.pathname.startsWith('/configuration');
+  const isSessionRoute = location.pathname.startsWith('/session');
+  const showSessionNavigation = isSessionRoute;
+  const showConfigurationNavigation = isConfigurationRoute && isAuthenticated;
 
   return (
     <div className="min-h-screen px-4 py-5 md:px-6 lg:px-8">
@@ -24,17 +30,25 @@ export function AppShell({ children }) {
               <h1 className="font-display text-xl font-semibold text-slate-900">Reflection Workspace</h1>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <nav className="flex flex-wrap gap-2">
-                <NavLink to={sessionPath} end className={({ isActive }) => navClassName(isActive)}>
-                  Session
-                </NavLink>
-                <NavLink to={finalizePath} end className={({ isActive }) => navClassName(isActive)}>
-                  Finalize Session
-                </NavLink>
-                <NavLink to="/configuration" className={({ isActive }) => navClassName(isActive)}>
-                  Configuration
-                </NavLink>
-              </nav>
+              {showSessionNavigation || showConfigurationNavigation ? (
+                <nav className="flex flex-wrap gap-2">
+                  {showSessionNavigation ? (
+                    <>
+                      <NavLink to={sessionPath} end className={({ isActive }) => navClassName(isActive)}>
+                        Session
+                      </NavLink>
+                      <NavLink to={finalizePath} end className={({ isActive }) => navClassName(isActive)}>
+                        Finalize Session
+                      </NavLink>
+                    </>
+                  ) : null}
+                  {showConfigurationNavigation ? (
+                    <NavLink to="/configuration" end className={({ isActive }) => navClassName(isActive)}>
+                      Configuration
+                    </NavLink>
+                  ) : null}
+                </nav>
+              ) : null}
               <label className="flex min-h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
                 <span>Language</span>
                 <select
@@ -49,6 +63,18 @@ export function AppShell({ children }) {
                   ))}
                 </select>
               </label>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  className="action-chip"
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                  }}
+                >
+                  Log out
+                </button>
+              ) : null}
             </div>
           </div>
         </header>

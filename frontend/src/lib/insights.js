@@ -18,7 +18,7 @@ export function buildPdfPayload({
       notes: sessionContext.notes,
       language
     },
-    selected_cards: selectedCards.map((cardId, index) => {
+    selected_cards: selectedCards.map((cardId) => {
       const card = catalogById[cardId];
       const labels = (cardLabels[String(cardId)] || [])
         .map((labelId) => (themeLabels[language] || themeLabels.en)[labelId - 1])
@@ -27,8 +27,7 @@ export function buildPdfPayload({
       return {
         id: cardId,
         title: card?.title || `Card ${String(cardId).padStart(3, '0')}`,
-        labels,
-        summary: `Final slot ${index + 1}`
+        labels
       };
     }),
     graphs: []

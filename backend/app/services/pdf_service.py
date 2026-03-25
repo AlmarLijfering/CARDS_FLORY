@@ -1,118 +1,71 @@
 from __future__ import annotations
 
 from io import BytesIO
-from math import ceil
 from pathlib import Path
+from xml.sax.saxutils import escape
 
-from reportlab.graphics.charts.barcharts import VerticalBarChart
-from reportlab.graphics.shapes import Drawing, Line
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
-from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from app.models import ChartSeries, PdfGenerationRequest, SelectedCard
+from app.models import PdfGenerationRequest, SelectedCard
 
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 CARD_ASSET_DIR = ROOT_DIR / 'frontend' / 'public' / 'cards'
-PAGE_WIDTH, PAGE_HEIGHT = A4
-
-
-def _safe_text(value: str | None, fallback: str = 'Not provided') -> str:
-    return value if value else fallback
+CARD_IMAGE_SIZE = 5.15 * cm
+MAX_NOTES_CHARS = 900
+MAX_NOTES_LINES = 10
 
 
 def _create_styles():
     styles = getSampleStyleSheet()
     styles.add(
         ParagraphStyle(
-            name='ReportTitle',
+            name='OverviewTitle',
             parent=styles['Heading1'],
             fontName='Helvetica-Bold',
-            fontSize=22,
-            leading=26,
+            fontSize=20,
+            leading=24,
             textColor=colors.HexColor('#0f172a'),
-            spaceAfter=10,
-        )
-    )
-    styles.add(
-        ParagraphStyle(
-            name='SectionTitle',
-            parent=styles['Heading2'],
-            fontName='Helvetica-Bold',
-            fontSize=14,
-            leading=18,
-            textColor=colors.HexColor('#1d4ed8'),
             spaceAfter=8,
-            spaceBefore=10,
         )
     )
     styles.add(
         ParagraphStyle(
-            name='BodyCopy',
+            name='CardCaption',
+            parent=styles['BodyText'],
+            fontName='Helvetica-Bold',
+            fontSize=9.5,
+            leading=11.5,
+            alignment=1,
+            textColor=colors.HexColor('#0f172a'),
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name='NotesLabel',
+            parent=styles['BodyText'],
+            fontName='Helvetica-Bold',
+            fontSize=10.5,
+            leading=13,
+            textColor=colors.HexColor('#0f172a'),
+            spaceAfter=5,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name='NotesBody',
             parent=styles['BodyText'],
             fontName='Helvetica',
-            fontSize=10.5,
-            leading=14,
+            fontSize=9.2,
+            leading=12,
             textColor=colors.HexColor('#334155'),
         )
     )
-    styles.add(
-        ParagraphStyle(
-            name='MutedCopy',
-            parent=styles['BodyText'],
-            fontName='Helvetica',
-            fontSize=9,
-            leading=12,
-            textColor=colors.HexColor('#64748b'),
-        )
-    )
-    styles.add(
-        ParagraphStyle(
-            name='CardHeading',
-            parent=styles['Heading3'],
-            fontName='Helvetica-Bold',
-            fontSize=12,
-            leading=15,
-            textColor=colors.HexColor('#0f172a'),
-            spaceAfter=4,
-        )
-    )
     return styles
-
-
-def _build_metadata_table(payload: PdfGenerationRequest) -> Table:
-    rows = [
-        ['Session', _safe_text(payload.context.session_title, 'Therapy card session')],
-        ['Facilitator', _safe_text(payload.context.facilitator)],
-        ['Client alias', _safe_text(payload.context.client_alias)],
-        ['Language', payload.context.language.upper()],
-        ['Selected cards', str(len(payload.selected_cards))],
-    ]
-
-    table = Table(rows, colWidths=[3.2 * cm, 12.8 * cm])
-    table.setStyle(
-        TableStyle(
-            [
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
-                ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#cbd5e1')),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#0f172a')),
-                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                ('FONTNAME', (1, 0), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('LEADING', (0, 0), (-1, -1), 13),
-                ('LEFTPADDING', (0, 0), (-1, -1), 9),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 9),
-                ('TOPPADDING', (0, 0), (-1, -1), 7),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-    return table
 
 
 def _card_image_path(card_id: int) -> Path:
@@ -123,21 +76,20 @@ def _build_card_image(card_id: int):
     image_path = _card_image_path(card_id)
     if image_path.exists():
         image = Image(str(image_path))
-        image.drawWidth = 6.35 * cm
-        image.drawHeight = 6.35 * cm
+        image.drawWidth = CARD_IMAGE_SIZE
+        image.drawHeight = CARD_IMAGE_SIZE
         return image
 
-    fallback = Table(
-        [[Paragraph('Image unavailable', _create_styles()['MutedCopy'])]],
-        colWidths=[6.35 * cm],
-        rowHeights=[6.35 * cm],
-    )
+    fallback = Table([['Image unavailable']], colWidths=[CARD_IMAGE_SIZE], rowHeights=[CARD_IMAGE_SIZE])
     fallback.setStyle(
         TableStyle(
             [
                 ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#cbd5e1')),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8.5),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#64748b')),
                 ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
             ]
         )
@@ -145,83 +97,78 @@ def _build_card_image(card_id: int):
     return fallback
 
 
-def _build_card_panel(card: SelectedCard, order: int, styles):
-    labels_text = ', '.join(card.labels) if card.labels else 'No theme labels assigned'
-    card_copy = [
-        Paragraph(f'{order}. {card.title}', styles['CardHeading']),
-        Paragraph(f'Card ID: {card.id:03d}', styles['BodyCopy']),
-        Spacer(1, 0.12 * cm),
-        Paragraph(f'Themes: {labels_text}', styles['BodyCopy']),
-    ]
-    if card.summary:
-        card_copy.extend(
+def _build_card_cell(card: SelectedCard, slot_number: int, styles):
+    cell = Table(
+        [
+            [_build_card_image(card.id)],
+            [Paragraph(f'{slot_number}. Card #{card.id:03d}', styles['CardCaption'])],
+        ],
+        colWidths=[CARD_IMAGE_SIZE + 0.2 * cm],
+    )
+    cell.setStyle(
+        TableStyle(
             [
-                Spacer(1, 0.12 * cm),
-                Paragraph(card.summary, styles['MutedCopy']),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('TOPPADDING', (0, 0), (-1, -1), 2),
             ]
         )
-
-    table = Table(
-        [[_build_card_image(card.id), card_copy]],
-        colWidths=[6.9 * cm, 9.0 * cm],
-        style=TableStyle(
-            [
-                ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#cbd5e1')),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 9),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 9),
-                ('TOPPADDING', (0, 0), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
-            ]
-        ),
     )
-    return table
+    return cell
 
 
-def _nice_axis_max(value: float) -> float:
-    if value <= 5:
-        return 5
-    magnitude = 10 ** (len(str(int(value))) - 1)
-    return ceil(value / magnitude) * magnitude
+def _build_cards_grid(selected_cards: list[SelectedCard], styles) -> Table:
+    cells = [_build_card_cell(card, index, styles) for index, card in enumerate(selected_cards[:6], start=1)]
+    rows = []
+    for start_index in range(0, len(cells), 3):
+        row = cells[start_index:start_index + 3]
+        while len(row) < 3:
+            row.append('')
+        rows.append(row)
+
+    if not rows:
+        rows = [['', '', '']]
+
+    grid = Table(rows, colWidths=[6.0 * cm, 6.0 * cm, 6.0 * cm], hAlign='CENTER')
+    grid.setStyle(
+        TableStyle(
+            [
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    return grid
 
 
-def _build_chart(series: ChartSeries) -> Drawing:
-    drawing = Drawing(16.0 * cm, 8.2 * cm)
-    chart = VerticalBarChart()
-    chart.x = 1.2 * cm
-    chart.y = 1.2 * cm
-    chart.width = 12.8 * cm
-    chart.height = 5.2 * cm
-    chart.data = [[point.value for point in series.data]]
-    chart.categoryAxis.categoryNames = [point.label for point in series.data]
-    chart.categoryAxis.labels.angle = 20 if len(series.data) > 4 else 0
-    chart.categoryAxis.labels.boxAnchor = 'ne'
-    chart.categoryAxis.labels.dx = 0
-    chart.categoryAxis.labels.dy = -2
-    chart.categoryAxis.labels.fontName = 'Helvetica'
-    chart.categoryAxis.labels.fontSize = 7
-    chart.valueAxis.valueMin = 0
-    chart.valueAxis.valueMax = _nice_axis_max(max(point.value for point in series.data))
-    chart.valueAxis.labels.fontName = 'Helvetica'
-    chart.valueAxis.labels.fontSize = 8
-    chart.bars[0].fillColor = colors.HexColor('#1d4ed8')
-    chart.bars[0].strokeColor = colors.HexColor('#1e3a8a')
-    chart.barSpacing = 6
-    chart.groupSpacing = 14
-    chart.strokeColor = colors.HexColor('#cbd5e1')
-    drawing.add(chart)
-    drawing.add(Line(1.0 * cm, 1.0 * cm, 14.5 * cm, 1.0 * cm, strokeColor=colors.HexColor('#e2e8f0')))
-    return drawing
+def _truncate_notes(notes: str | None) -> str:
+    if not notes:
+        return 'No notes added.'
+
+    lines = [line.strip() for line in notes.replace('\r\n', '\n').split('\n')]
+    compact_lines = [line for line in lines if line]
+    if not compact_lines:
+        return 'No notes added.'
+
+    clipped_lines = compact_lines[:MAX_NOTES_LINES]
+    joined = '\n'.join(clipped_lines)
+    if len(joined) > MAX_NOTES_CHARS:
+        joined = joined[:MAX_NOTES_CHARS].rstrip()
+        joined = f'{joined}...'
+    elif len(compact_lines) > MAX_NOTES_LINES:
+        joined = f'{joined}...'
+    return joined
 
 
-def _draw_page_chrome(canvas, _doc):
-    canvas.saveState()
-    canvas.setFillColor(colors.HexColor('#64748b'))
-    canvas.setFont('Helvetica', 9)
-    canvas.drawRightString(PAGE_WIDTH - 1.5 * cm, 1.1 * cm, f'Page {canvas.getPageNumber()}')
-    canvas.restoreState()
+def _notes_paragraph(notes: str | None, styles) -> Paragraph:
+    truncated = _truncate_notes(notes)
+    html = '<br/>'.join(escape(line) for line in truncated.split('\n'))
+    return Paragraph(html, styles['NotesBody'])
 
 
 def build_pdf(payload: PdfGenerationRequest) -> bytes:
@@ -230,60 +177,24 @@ def build_pdf(payload: PdfGenerationRequest) -> bytes:
     document = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=1.5 * cm,
-        rightMargin=1.5 * cm,
-        topMargin=1.5 * cm,
-        bottomMargin=1.5 * cm,
-        title=payload.context.session_title or 'Therapy card session',
-        author=payload.context.facilitator or 'Therapy Cards App',
+        leftMargin=1.1 * cm,
+        rightMargin=1.1 * cm,
+        topMargin=1.0 * cm,
+        bottomMargin=1.0 * cm,
+        title='Therapy Card Reflection Overview',
+        author='Therapy Cards App',
     )
 
     story = [
-        Paragraph(payload.context.session_title or 'Therapy Card Reflection Report', styles['ReportTitle']),
-        Paragraph(
-            'This report was generated on demand. The submitted card selection and notes are used only to build this PDF in memory and are not stored on the server.',
-            styles['BodyCopy'],
-        ),
+        Paragraph('Therapy Card Reflection Overview', styles['OverviewTitle']),
+        Spacer(1, 0.15 * cm),
+        _build_cards_grid(payload.selected_cards, styles),
         Spacer(1, 0.35 * cm),
-        _build_metadata_table(payload),
+        Paragraph('Notes:', styles['NotesLabel']),
+        _notes_paragraph(payload.context.notes, styles),
     ]
 
-    if payload.context.notes:
-        story.extend(
-            [
-                Spacer(1, 0.4 * cm),
-                Paragraph('Session notes', styles['SectionTitle']),
-                Paragraph(payload.context.notes.replace('\n', '<br/>'), styles['BodyCopy']),
-            ]
-        )
-
-    story.extend(
-        [
-            Spacer(1, 0.5 * cm),
-            Paragraph('Selected cards', styles['SectionTitle']),
-            Paragraph(
-                'The final card order is preserved exactly as it was submitted from the browser session.',
-                styles['BodyCopy'],
-            ),
-            Spacer(1, 0.2 * cm),
-        ]
-    )
-
-    for index, card in enumerate(payload.selected_cards, start=1):
-        story.append(_build_card_panel(card, index, styles))
-        story.append(Spacer(1, 0.3 * cm))
-
-    if payload.graphs:
-        story.extend([PageBreak(), Paragraph('Session insights', styles['SectionTitle'])])
-        for graph in payload.graphs:
-            story.append(Paragraph(graph.title, styles['CardHeading']))
-            if graph.description:
-                story.append(Paragraph(graph.description, styles['BodyCopy']))
-            story.append(Spacer(1, 0.12 * cm))
-            story.append(_build_chart(graph))
-            story.append(Spacer(1, 0.35 * cm))
-
-    document.build(story, onFirstPage=_draw_page_chrome, onLaterPages=_draw_page_chrome)
+    document.build(story)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes

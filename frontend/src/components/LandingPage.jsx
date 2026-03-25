@@ -1,12 +1,23 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { EmptyState } from './EmptyState';
 import { useAppState } from '../lib/app-state';
 
 
 export function LandingPage() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const { config, sessionPath } = useAppState();
+  const { config, isAuthenticated, login, logout, sessionPath } = useAppState();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const redirectTarget = typeof location.state?.from === 'string' ? location.state.from : '/configuration';
+
+  function handleLogin(event) {
+    event.preventDefault();
+    login();
+    navigate(redirectTarget, { replace: true });
+  }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -14,11 +25,9 @@ export function LandingPage() {
         <p className="eyebrow">Session Flow</p>
         <h2 className="page-title mt-3">Choose where you want to work.</h2>
         <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-          The new stack keeps therapy-session data in the browser only. Theme labels and card-label
-          configuration stay local to the device, and the backend is used only to render the final PDF
-          in memory.
+          Open the session workspace directly for card selection, or sign in to access configuration on this device.
         </p>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="mt-8">
           <Link
             to={sessionPath}
             className={`surface-muted group flex min-h-56 flex-col justify-between p-6 transition ${
@@ -38,41 +47,62 @@ export function LandingPage() {
               {config.selectCardsBlocked ? 'Blocked in configuration' : 'Start a session'}
             </span>
           </Link>
-          <Link
-            to="/configuration"
-            className="surface-muted group flex min-h-56 flex-col justify-between p-6 transition hover:-translate-y-1 hover:shadow-card"
-          >
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-100 text-accent-700">
-              <span className="text-xl font-bold">02</span>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-slate-900">Open Configuration</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Adjust theme names, assign labels to cards, and decide whether the session route should
-                be blocked.
-              </p>
-            </div>
-            <span className="mt-4 text-sm font-semibold text-accent-700">Configure workspace</span>
-          </Link>
         </div>
       </section>
       <section className="surface px-6 py-8 md:px-8 md:py-10">
-        <p className="eyebrow">Privacy</p>
-        <h2 className="mt-3 font-display text-2xl font-semibold text-slate-900">Built for sensitive sessions.</h2>
-        <div className="mt-6 space-y-4 text-sm leading-7 text-slate-600">
-          <p>The browser owns the active session. Nothing about the selected cards is stored in a server database.</p>
-          <p>
-            When you choose <strong>Print to PDF</strong>, the frontend sends only the final payload to FastAPI,
-            which streams the PDF back immediately and discards the data.
-          </p>
-        </div>
+        <p className="eyebrow">Admin Access</p>
+        <h2 className="mt-3 font-display text-2xl font-semibold text-slate-900">Configuration access</h2>
+        {isAuthenticated ? (
+          <div className="mt-6 space-y-4">
+            <p className="text-sm leading-7 text-slate-600">
+              You are signed in on this browser and can manage theme labels, card labels, and workspace blocking.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/configuration" className="action-chip action-chip-active">
+                Open configuration
+              </Link>
+              <button type="button" className="action-chip" onClick={logout}>
+                Log out
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            <p className="text-sm leading-7 text-slate-600">
+              Login is used only to unlock configuration in this browser. Username and password are not validated yet.
+            </p>
+            <label className="block text-sm font-semibold text-slate-700">
+              Username
+              <input
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                className="mt-2 min-h-11 w-full rounded-2xl border border-slate-300 px-4 py-2 text-sm"
+                autoComplete="username"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="mt-2 min-h-11 w-full rounded-2xl border border-slate-300 px-4 py-2 text-sm"
+                autoComplete="current-password"
+              />
+            </label>
+            <button type="submit" className="action-chip action-chip-active">
+              Login
+            </button>
+          </form>
+        )}
         {config.selectCardsBlocked ? (
           <div className="mt-8">
             <EmptyState
               title="Session workspace is blocked"
-              description="The select-cards route is currently disabled in local configuration, including direct in-app navigation."
-              actionLabel="Open configuration"
-              onAction={() => navigate('/configuration')}
+              description="The session route is currently disabled in local configuration on this browser."
+              actionLabel={isAuthenticated ? 'Open configuration' : undefined}
+              onAction={isAuthenticated ? () => navigate('/configuration') : undefined}
               tone="warning"
             />
           </div>

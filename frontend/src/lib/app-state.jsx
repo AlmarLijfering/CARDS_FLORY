@@ -205,6 +205,19 @@ function normalizeLanguage(rawLanguage) {
 }
 
 
+function normalizeAuthentication(rawAuth) {
+  if (typeof rawAuth === 'boolean') {
+    return rawAuth;
+  }
+
+  if (rawAuth && typeof rawAuth === 'object' && 'isAuthenticated' in rawAuth) {
+    return Boolean(rawAuth.isAuthenticated);
+  }
+
+  return false;
+}
+
+
 function arrayMove(items, fromIndex, toIndex) {
   const clone = [...items];
   const [moved] = clone.splice(fromIndex, 1);
@@ -216,6 +229,7 @@ function arrayMove(items, fromIndex, toIndex) {
 export function AppStateProvider({ children }) {
   const location = useLocation();
   const activeSessionKey = sessionKeyFromPath(location.pathname);
+  const [isAuthenticated, setIsAuthenticated] = useLocalStorageState(STORAGE_KEYS.auth, false, normalizeAuthentication);
   const [config, setConfig] = useLocalStorageState(STORAGE_KEYS.config, DEFAULT_CONFIG, normalizeConfig);
   const [language, setLanguage] = useLocalStorageState(STORAGE_KEYS.language, 'en', normalizeLanguage);
   const [guidanceDismissed, setGuidanceDismissed] = useLocalStorageState(STORAGE_KEYS.guidance, false, Boolean);
@@ -271,6 +285,14 @@ export function AppStateProvider({ children }) {
       ...current,
       selectCardsBlocked: Boolean(isBlocked)
     }));
+  }
+
+  function login() {
+    setIsAuthenticated(true);
+  }
+
+  function logout() {
+    setIsAuthenticated(false);
   }
 
   function addSelectedCard(cardId, preferredIndex = selectedCards.length) {
@@ -377,6 +399,7 @@ export function AppStateProvider({ children }) {
     activeSessionKey,
     sessionPath: buildSessionPath(activeSessionKey),
     finalizePath: buildFinalizePath(activeSessionKey),
+    isAuthenticated,
     config,
     language,
     setLanguage,
@@ -387,6 +410,8 @@ export function AppStateProvider({ children }) {
     setThemeLabels,
     setCardLabels,
     setSelectCardsBlocked,
+    login,
+    logout,
     addSelectedCard,
     removeSelectedCard,
     reorderSelectedCards,

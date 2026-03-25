@@ -32,9 +32,11 @@ def _allowed_origins() -> list[str]:
 
 
 def _report_filename(session_title: str | None) -> str:
-    base_name = session_title or 'therapy-card-report'
+    base_name = session_title or 'therapy-card-overview'
     sanitized = re.sub(r'[^A-Za-z0-9_-]+', '-', base_name.strip()).strip('-').lower()
-    return f'{sanitized or "therapy-card-report"}.pdf'
+    if sanitized and not sanitized.endswith('-overview'):
+        sanitized = f'{sanitized}-overview'
+    return f'{sanitized or "therapy-card-overview"}.pdf'
 
 
 app = FastAPI(
