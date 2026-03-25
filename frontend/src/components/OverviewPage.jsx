@@ -17,8 +17,7 @@ export function OverviewPage() {
     selectedCards,
     sessionContext,
     sessionPath,
-    updateSessionContext,
-    getCardLabelNames
+    updateSessionContext
   } = useAppState();
   const [isPrinting, setIsPrinting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -72,14 +71,11 @@ export function OverviewPage() {
   }
 
   return (
-    <section className="surface px-6 py-8 md:px-8 md:py-10">
+    <section className="surface px-4 py-4 md:px-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="eyebrow">Finalize Session</p>
-          <h2 className="page-title mt-3">Review cards and add session notes.</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-            This page is intentionally simple: your selected cards, one notes field, and the PDF action.
-          </p>
+          <h2 className="page-title mt-2">Review cards and add session notes.</h2>
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="button" className="action-chip" onClick={() => navigate(sessionPath)}>
@@ -97,42 +93,30 @@ export function OverviewPage() {
         </div>
       ) : null}
 
-      <div className="mt-8 rounded-[28px] border border-slate-200 bg-slate-50 px-5 py-5">
-        <p className="text-sm font-semibold text-slate-900">
-          {activeSessionKey === 'default' ? 'Default session' : `Session: ${activeSessionKey}`}
-        </p>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Session notes stay only in this browser session until you print the PDF.
-        </p>
+      <div className="mt-5 rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
         <label className="mt-4 block text-sm font-semibold text-slate-700">
-          Session notes
+          Add notes for the selection
           <textarea
             value={sessionContext.notes}
             onChange={(event) => updateSessionContext({ notes: event.target.value })}
             rows={6}
             className="mt-2 w-full rounded-[24px] border border-slate-300 bg-white px-4 py-3 text-sm"
-            placeholder="Add notes for the session report"
+            placeholder="Add notes related to the selected cards"
           />
         </label>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {selectedCardObjects.map((card, index) => (
-          <article key={card.id} className="surface-muted flex min-w-0 flex-col gap-3 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">
-                {index + 1}
-              </span>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Card #{card.id}</p>
-            </div>
-            <div className="overflow-hidden rounded-[20px] bg-slate-100">
+          <article key={card.id} className="surface-muted flex min-w-0 flex-col gap-2 p-2.5">
+            <div className="relative overflow-hidden rounded-[18px] bg-slate-100">
               <img src={card.largeImage} alt={card.title} className="aspect-[4/5] w-full object-cover" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold text-slate-900">{card.title}</h3>
-              <p className="truncate text-xs text-slate-500">
-                {getCardLabelNames(card.id).length ? getCardLabelNames(card.id).join(' • ') : 'No labels assigned yet'}
-              </p>
+              <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow">
+                #{card.id}
+              </div>
+              <div className="absolute right-2 top-2 rounded-full bg-brand-600 px-2 py-1 text-[11px] font-semibold text-white">
+                {index + 1}
+              </div>
             </div>
           </article>
         ))}

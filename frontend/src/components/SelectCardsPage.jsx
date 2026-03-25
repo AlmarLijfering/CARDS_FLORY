@@ -37,27 +37,21 @@ function SelectedDropzone({ children, isOver, setNodeRef }) {
 export function SelectCardsPage() {
   const navigate = useNavigate();
   const {
-    activeSessionKey,
     config,
     finalizePath,
-    guidanceDismissed,
-    sessionPath,
-    setGuidanceDismissed,
     selectedCards,
     addSelectedCard,
     removeSelectedCard,
     reorderSelectedCards,
     clearSelection,
     getThemeLabels,
-    getCardLabelIds,
-    getCardLabelNames
+    getCardLabelIds
   } = useAppState();
 
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeCardId, setActiveCardId] = useState(() => cardCatalog[0]?.id ?? null);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window === 'undefined' ? 1440 : window.innerWidth));
   const [activeDragCardId, setActiveDragCardId] = useState(null);
-  const [linkCopied, setLinkCopied] = useState(false);
 
   const themeLabels = getThemeLabels();
   const selectedCardSet = new Set(selectedCards);
@@ -133,17 +127,6 @@ export function SelectCardsPage() {
     .filter(Boolean);
 
   const gridColumns = windowWidth >= 1536 ? 6 : windowWidth >= 1280 ? 5 : windowWidth >= 1024 ? 4 : windowWidth >= 768 ? 3 : 2;
-  const shareableSessionUrl = typeof window === 'undefined' ? sessionPath : `${window.location.origin}${sessionPath}`;
-
-  async function copySessionLink() {
-    try {
-      await navigator.clipboard.writeText(shareableSessionUrl);
-      setLinkCopied(true);
-      window.setTimeout(() => setLinkCopied(false), 1800);
-    } catch (error) {
-      setLinkCopied(false);
-    }
-  }
 
   function handleAddCard(cardId, preferredIndex = selectedCards.length) {
     if (selectedCardSet.has(cardId) || selectedCards.length >= MAX_SELECTED_CARDS) {
@@ -286,52 +269,31 @@ export function SelectCardsPage() {
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-6">
-        <section className="surface px-5 py-6 md:px-6">
+        <section className="surface px-4 py-4 md:px-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="eyebrow">Session</p>
-              <h2 className="mt-3 text-2xl font-semibold text-slate-900">Select up to six cards.</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                This session can be opened directly with its own link, and its card selection stays isolated by URL in this browser tab.
-              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">My Selection</h2>
             </div>
-            <div className="flex flex-col gap-2 text-sm text-slate-600">
-              <span className="inline-flex min-h-11 items-center rounded-full border border-slate-200 bg-slate-50 px-4 font-semibold text-slate-700">
-                {activeSessionKey === 'default' ? 'Default session' : `Session: ${activeSessionKey}`}
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className="action-chip" onClick={copySessionLink}>
-                  {linkCopied ? 'Link copied' : 'Copy session link'}
-                </button>
-                <button
-                  type="button"
-                  className="action-chip action-chip-active"
-                  disabled={!selectedCards.length}
-                  onClick={() => navigate(finalizePath)}
-                >
-                  Finalize Session
-                </button>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="action-chip action-chip-active"
+                disabled={!selectedCards.length}
+                onClick={() => navigate(finalizePath)}
+              >
+                Finalize Selection
+              </button>
+              <button type="button" className="action-chip" disabled={!selectedCards.length} onClick={clearSelection}>
+                Clear Selection
+              </button>
             </div>
           </div>
 
-          {!guidanceDismissed ? (
-            <div className="mt-5 rounded-3xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p>
-                  The six selected cards stay in the top tray. Use the filter buttons below and click or drag cards into place.
-                </p>
-                <button type="button" className="text-sm font-semibold underline underline-offset-4" onClick={() => setGuidanceDismissed(true)}>
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-6">
+          <div className="mt-4">
             <SelectedDropzone isOver={selectionBoardOver} setNodeRef={setSelectionBoardRef}>
               <SortableContext items={selectedCardObjects.map((card) => `selected-${card.id}`)} strategy={rectSortingStrategy}>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                   {Array.from({ length: MAX_SELECTED_CARDS }, (_, index) => {
                     const card = selectedCardObjects[index];
                     if (!card) {
@@ -344,7 +306,6 @@ export function SelectCardsPage() {
                         card={card}
                         index={index}
                         totalSelected={selectedCardObjects.length}
-                        labelNames={getCardLabelNames(card.id)}
                         onMove={(fromIndex, toIndex) => reorderSelectedCards(fromIndex, toIndex)}
                         onRemove={removeSelectedCard}
                       />
@@ -355,34 +316,10 @@ export function SelectCardsPage() {
             </SelectedDropzone>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="action-chip action-chip-active"
-              disabled={!selectedCards.length}
-              onClick={() => navigate(finalizePath)}
-            >
-              Finalize Session
-            </button>
-            <button type="button" className="action-chip" disabled={!selectedCards.length} onClick={clearSelection}>
-              Clear session
-            </button>
-          </div>
         </section>
 
-        <section className="surface px-5 py-6 md:px-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="eyebrow">Available Cards</p>
-              <h2 className="mt-3 text-2xl font-semibold text-slate-900">Choose by label buttons.</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Search has been removed. Use the label buttons to switch card groups, then click or drag cards into the top row.
-              </p>
-            </div>
-            <span className="text-sm text-slate-500">{filteredCards.length} cards shown</span>
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-2" role="toolbar" aria-label="Filter cards by label">
+        <section className="surface px-4 py-4 md:px-5">
+          <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Filter cards by label">
             {filterChips.map((chip) => {
               const isActive = activeFilter === chip.id;
               return (
@@ -399,12 +336,11 @@ export function SelectCardsPage() {
             })}
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             {filteredCards.map((card) => (
               <CardTile
                 key={card.id}
                 card={card}
-                labelNames={getCardLabelNames(card.id)}
                 isActive={card.id === activeCardId}
                 isSelected={selectedCardSet.has(card.id)}
                 onActivate={setActiveCardId}
@@ -418,7 +354,7 @@ export function SelectCardsPage() {
 
       <DragOverlay>
         {activeDragCardId ? (
-          <div className="w-40 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-3 shadow-card">
+          <div className="w-32 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-card">
             <img
               src={cardCatalog.find((card) => card.id === activeDragCardId)?.smallImage}
               alt={`Card ${activeDragCardId}`}
