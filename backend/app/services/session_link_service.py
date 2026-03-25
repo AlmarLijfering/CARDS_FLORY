@@ -6,8 +6,6 @@ import hmac
 import json
 import os
 import secrets
-import urllib.error
-import urllib.request
 from datetime import UTC, datetime, timedelta
 
 from app.services.session_registry_service import get_active_session, register_active_session
@@ -61,58 +59,6 @@ def _invite_url(token: str) -> str:
     return f'{_frontend_app_url()}/#/invite/{token}'
 
 
-def _tinyurl_api_token() -> str:
-    return os.environ.get('TINYURL_API_TOKEN', '').strip()
-
-
-def _tinyurl_domain() -> str:
-    return os.environ.get('TINYURL_DOMAIN', 'tinyurl.com').strip() or 'tinyurl.com'
-
-
-def _shorten_with_tinyurl(long_url: str) -> str | None:
-    api_token = _tinyurl_api_token()
-    if not api_token:
-        return None
-
-    payload = json.dumps(
-        {
-            'url': long_url,
-            'domain': _tinyurl_domain(),
-        }
-    ).encode('utf-8')
-    request = urllib.request.Request(
-        'https://api.tinyurl.com/create',
-        data=payload,
-        headers={
-            'Authorization': f'Bearer {api_token}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        },
-        method='POST',
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            response_data = json.loads(response.read().decode('utf-8'))
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError):
-        return None
-
-    if not isinstance(response_data, dict):
-        return None
-
-    data = response_data.get('data')
-    if isinstance(data, dict):
-        candidate = data.get('tiny_url') or data.get('short_url')
-        if isinstance(candidate, str) and candidate.strip():
-            return candidate.strip()
-
-    candidate = response_data.get('tiny_url') or response_data.get('short_url')
-    if isinstance(candidate, str) and candidate.strip():
-        return candidate.strip()
-
-    return None
-
-
 def create_session_link(hours: int = DEFAULT_LINK_TTL_HOURS) -> dict[str, str | bool]:
     session_key = _generate_session_key()
     expires_at = _expiry_timestamp(hours)
@@ -123,15 +69,12 @@ def create_session_link(hours: int = DEFAULT_LINK_TTL_HOURS) -> dict[str, str | 
     payload_bytes = json.dumps(payload, separators=(',', ':'), sort_keys=True).encode('utf-8')
     token = f'{_base64url_encode(payload_bytes)}.{_token_signature(payload_bytes)}'
     register_active_session(session_key, expires_at.isoformat())
-    long_url = _invite_url(token)
-    short_url = _shorten_with_tinyurl(long_url) or long_url
+    session_url = _invite_url(token)
 
     return {
         'session_key': session_key,
         'expires_at': expires_at.isoformat(),
-        'long_url': long_url,
-        'short_url': short_url,
-        'used_tinyurl': short_url != long_url,
+        'session_url': session_url,
     }
 
 

@@ -19,10 +19,6 @@ services:
         sync: false
       - key: SESSION_LINK_STORAGE_DIR
         value: /var/data
-      - key: TINYURL_API_TOKEN
-        sync: false
-      - key: TINYURL_DOMAIN
-        sync: false
       - key: User_Name
         sync: false
       - key: Password

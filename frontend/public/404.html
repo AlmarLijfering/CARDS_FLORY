@@ -7,6 +7,11 @@
       (function () {
         var path = window.location.pathname || '/';
         var query = window.location.search || '';
+        if (path === '/session' || path.indexOf('/session/') === 0) {
+          var sessionRoute = path === '/session' ? '/' : path.slice('/session'.length);
+          window.location.replace('/session/#' + sessionRoute + query);
+          return;
+        }
         var hashPath = path === '/' ? '' : '#' + path + query;
         window.location.replace('/' + hashPath);
       })();

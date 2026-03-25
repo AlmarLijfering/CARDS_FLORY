@@ -31,12 +31,12 @@ export function ConfigurationPage() {
   }
 
   async function handleCopyLink() {
-    if (!sessionLink?.short_url) {
+    if (!sessionLink?.session_url) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(sessionLink.short_url);
+      await navigator.clipboard.writeText(sessionLink.session_url);
       setCopyLabel('Copied');
       window.setTimeout(() => setCopyLabel('Copy link'), 1800);
     } catch (error) {
@@ -104,10 +104,10 @@ export function ConfigurationPage() {
             <div>
               <p className="text-sm font-semibold text-slate-900">Create 24-hour session link</p>
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                Generate a unique client session URL that expires after 24 hours. If TinyURL is configured on the backend, the shared link will be shortened automatically.
+                Generate a unique client session URL that expires after 24 hours.
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                TinyURL requires backend env vars `TINYURL_API_TOKEN`, optional `TINYURL_DOMAIN`, and `FRONTEND_APP_URL`.
+                Set `FRONTEND_APP_URL` on the backend to the public app address, for example `https://lijfering.eu/session`.
               </p>
             </div>
             <button
@@ -138,18 +138,13 @@ export function ConfigurationPage() {
                 <span className="font-semibold text-slate-900">Expires:</span> {new Date(sessionLink.expires_at).toLocaleString()}
               </p>
               <p className="mt-2 break-all">
-                <span className="font-semibold text-slate-900">Share URL:</span> {sessionLink.short_url}
+                <span className="font-semibold text-slate-900">Share URL:</span> {sessionLink.session_url}
               </p>
-              {!sessionLink.used_tinyurl ? (
-                <p className="mt-2 text-slate-500">
-                  TinyURL is not configured, so the direct invite link is shown instead. Add `TINYURL_API_TOKEN` on the backend to enable shortening.
-                </p>
-              ) : null}
               <div className="mt-3 flex flex-wrap gap-3">
                 <button type="button" className="action-chip" onClick={handleCopyLink}>
                   {copyLabel}
                 </button>
-                <a className="action-chip" href={sessionLink.short_url} target="_blank" rel="noreferrer">
+                <a className="action-chip" href={sessionLink.session_url} target="_blank" rel="noreferrer">
                   Open link
                 </a>
               </div>

@@ -122,9 +122,7 @@ class SessionLinkCreateResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
-    long_url: str = Field(..., min_length=1, max_length=500)
-    short_url: str = Field(..., min_length=1, max_length=500)
-    used_tinyurl: bool = False
+    session_url: str = Field(..., min_length=1, max_length=500)
 
 
 class SessionLinkVerificationResponse(BaseModel):
