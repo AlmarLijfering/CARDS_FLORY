@@ -4,14 +4,12 @@ import {
   closestCenter,
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   MouseSensor,
   TouchSensor,
   useDroppable,
   useSensor,
   useSensors
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 import { cardCatalog } from '../data/cardCatalog';
 import { MAX_SELECTED_CARDS } from '../lib/constants';
@@ -105,9 +103,6 @@ export function SelectCardsPage() {
         delay: 180,
         tolerance: 10
       }
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
     })
   );
 
@@ -174,24 +169,43 @@ export function SelectCardsPage() {
   const gridColumns = windowWidth >= 1280 ? 4 : windowWidth >= 768 ? 2 : 1;
   const slotGridColumns = windowWidth >= 640 ? 2 : 1;
 
-  function focusCatalogCard(cardId = activeCardId || filteredCards[0]?.id) {
+  function getPreferredCatalogCardId() {
+    return filteredCards.find((card) => !selectedCardSet.has(card.id))?.id ?? filteredCards[0]?.id ?? null;
+  }
+
+  function getPreferredSelectedSlotIndex() {
+    const firstFilledIndex = selectedCards.findIndex((cardId) => Number.isInteger(cardId));
+    return firstFilledIndex === -1 ? 0 : firstFilledIndex;
+  }
+
+  function scheduleFocus(elementId) {
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(elementId);
+      if (target) {
+        target.focus();
+        return;
+      }
+
+      window.setTimeout(() => {
+        document.getElementById(elementId)?.focus();
+      }, 0);
+    });
+  }
+
+  function focusCatalogCard(cardId = getPreferredCatalogCardId()) {
     if (!cardId) {
       return;
     }
     setActivePane('right');
     setActiveCardId(cardId);
-    window.requestAnimationFrame(() => {
-      document.getElementById(`catalog-card-${cardId}`)?.focus();
-    });
+    scheduleFocus(`catalog-card-${cardId}`);
   }
 
-  function focusSelectedSlot(slotIndex = activeSlotIndex) {
+  function focusSelectedSlot(slotIndex = getPreferredSelectedSlotIndex()) {
     const normalizedIndex = Math.max(0, Math.min(slotIndex, MAX_SELECTED_CARDS - 1));
     setActivePane('left');
     setActiveSlotIndex(normalizedIndex);
-    window.requestAnimationFrame(() => {
-      document.getElementById(`selected-slot-${normalizedIndex}`)?.focus();
-    });
+    scheduleFocus(`selected-slot-${normalizedIndex}`);
   }
 
   function handleAddCard(cardId, options = {}) {
@@ -218,18 +232,33 @@ export function SelectCardsPage() {
     }
 
     let nextIndex = currentIndex;
+    const rowStart = Math.floor(currentIndex / gridColumns) * gridColumns;
+    const rowEnd = Math.min(filteredCards.length - 1, rowStart + gridColumns - 1);
     switch (event.key) {
       case 'ArrowRight':
-        nextIndex = Math.min(filteredCards.length - 1, currentIndex + 1);
+        nextIndex = currentIndex >= rowEnd ? rowStart : currentIndex + 1;
         break;
       case 'ArrowLeft':
-        nextIndex = Math.max(0, currentIndex - 1);
+        nextIndex = currentIndex <= rowStart ? rowEnd : currentIndex - 1;
         break;
       case 'ArrowDown':
-        nextIndex = Math.min(filteredCards.length - 1, currentIndex + gridColumns);
+        nextIndex = currentIndex + gridColumns;
+        if (nextIndex >= filteredCards.length) {
+          nextIndex = currentIndex % gridColumns;
+        }
+        if (nextIndex >= filteredCards.length) {
+          nextIndex = filteredCards.length - 1;
+        }
         break;
       case 'ArrowUp':
-        nextIndex = Math.max(0, currentIndex - gridColumns);
+        nextIndex = currentIndex - gridColumns;
+        if (nextIndex < 0) {
+          const columnIndex = currentIndex % gridColumns;
+          nextIndex = filteredCards.length - 1;
+          while (nextIndex % gridColumns !== columnIndex && nextIndex > columnIndex) {
+            nextIndex -= 1;
+          }
+        }
         break;
       case 'Home':
         nextIndex = 0;
@@ -244,7 +273,7 @@ export function SelectCardsPage() {
         return;
       case 'Tab':
         event.preventDefault();
-        focusSelectedSlot(activeSlotIndex);
+        focusSelectedSlot();
         return;
       default:
         return;
@@ -263,16 +292,26 @@ export function SelectCardsPage() {
 
     switch (event.key) {
       case 'ArrowRight':
-        nextIndex = Math.min(MAX_SELECTED_CARDS - 1, index + 1);
+        nextIndex = index >= MAX_SELECTED_CARDS - 1 ? 0 : index + 1;
         break;
       case 'ArrowLeft':
-        nextIndex = Math.max(0, index - 1);
+        nextIndex = index <= 0 ? MAX_SELECTED_CARDS - 1 : index - 1;
         break;
       case 'ArrowDown':
-        nextIndex = Math.min(MAX_SELECTED_CARDS - 1, index + slotGridColumns);
+        nextIndex = index + slotGridColumns;
+        if (nextIndex >= MAX_SELECTED_CARDS) {
+          nextIndex = index % slotGridColumns;
+        }
         break;
       case 'ArrowUp':
-        nextIndex = Math.max(0, index - slotGridColumns);
+        nextIndex = index - slotGridColumns;
+        if (nextIndex < 0) {
+          const columnIndex = index % slotGridColumns;
+          nextIndex = MAX_SELECTED_CARDS - 1;
+          while (nextIndex % slotGridColumns !== columnIndex && nextIndex > columnIndex) {
+            nextIndex -= 1;
+          }
+        }
         break;
       case 'Home':
         nextIndex = 0;
@@ -285,9 +324,7 @@ export function SelectCardsPage() {
         event.preventDefault();
         if (hasCard && Number.isInteger(cardId)) {
           removeSelectedCard(cardId);
-          window.requestAnimationFrame(() => {
-            focusSelectedSlot(index);
-          });
+          focusSelectedSlot(index);
         }
         return;
       case 'Delete':
@@ -295,9 +332,7 @@ export function SelectCardsPage() {
         event.preventDefault();
         if (hasCard && Number.isInteger(cardId)) {
           removeSelectedCard(cardId);
-          window.requestAnimationFrame(() => {
-            focusSelectedSlot(index);
-          });
+          focusSelectedSlot(index);
         }
         return;
       case 'Tab':

@@ -15,6 +15,8 @@ export function EmptySelectionSlot({ index, labels, isActive, onActivate, onKeyD
       id={`selected-slot-${index}`}
       ref={setNodeRef}
       role="button"
+      data-slot-index={index}
+      data-has-card="false"
       tabIndex={isActive ? 0 : -1}
       onFocus={onActivate}
       onClick={onActivate}
@@ -59,18 +61,20 @@ export function SelectedCardSlot({
       id={`selected-slot-${index}`}
       ref={setNodeRef}
       role="button"
+      data-slot-index={index}
+      data-has-card="true"
       tabIndex={isActive ? 0 : -1}
       onFocus={onActivate}
       onClick={onActivate}
       onKeyDown={(event) => onKeyDown(event, index, true, card.id)}
-      className={`surface-muted flex min-w-0 flex-col p-1.5 transition focus-visible:ring-0 focus-visible:ring-offset-0 ${
+      className={`surface-muted flex min-w-0 aspect-square flex-col p-1.5 transition focus-visible:ring-0 focus-visible:ring-offset-0 ${
         isOver ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''
       } ${
         isActive ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''
       }`}
     >
-      <div className="relative overflow-hidden rounded-[18px] bg-slate-100" onContextMenu={(event) => onOpenMenu(event, card)}>
-        <img src={card.largeImage} alt={card.title} className="aspect-square w-full object-cover opacity-80 saturate-50" />
+      <div className="relative h-full overflow-hidden rounded-[18px] bg-slate-100" onContextMenu={(event) => onOpenMenu(event, card)}>
+        <img src={card.largeImage} alt={card.title} className="aspect-square h-full w-full object-cover opacity-80 saturate-50" />
         <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow">
           #{card.id}
         </div>
