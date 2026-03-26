@@ -30,7 +30,7 @@ export function EmptySelectionSlot({ index, labels }) {
 export function SelectedCardSlot({
   card,
   index,
-  labels,
+  removeLabel,
   onOpenMenu,
   onRemove
 }) {
@@ -58,19 +58,16 @@ export function SelectedCardSlot({
         <div className="absolute right-2 top-2 rounded-full bg-brand-600 px-2 py-1 text-[11px] font-semibold text-white">
           {index + 1}
         </div>
-        <div className="absolute bottom-2 left-2 rounded-full bg-brand-600 px-2 py-1 text-[11px] font-semibold text-white shadow">
-          {labels.selected}
-        </div>
+        <button
+          type="button"
+          className="absolute bottom-2 right-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 shadow"
+          onClick={() => onRemove(card.id)}
+          aria-label={`${removeLabel} ${card.id}`}
+          title={removeLabel}
+        >
+          X
+        </button>
       </div>
-      <button
-        type="button"
-        className="min-h-9 rounded-2xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700"
-        onClick={() => onRemove(card.id)}
-        aria-label={`${labels.removeCard} ${card.id}`}
-        title={labels.removeCard}
-      >
-        X
-      </button>
     </article>
   );
 }

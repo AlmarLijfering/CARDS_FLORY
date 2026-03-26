@@ -336,19 +336,17 @@ export function SelectCardsPage() {
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.9fr)_minmax(0,1.1fr)]">
         <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-h-[5.75rem] flex-col gap-4 border-b border-slate-200 pb-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="eyebrow">{text.common.session}</p>
               <h2 className="mt-2 text-2xl font-semibold text-slate-900">
                 {sessionDetails?.session_name || text.select.selectionTitle}
               </h2>
-              <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">
-                  {selectedCardCount}/{MAX_SELECTED_CARDS}
-                </span>
-              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white shadow">
+                {selectedCardCount}/{MAX_SELECTED_CARDS}
+              </span>
               <button
                 type="button"
                 className="action-chip action-chip-active"
@@ -387,10 +385,7 @@ export function SelectCardsPage() {
                       key={`slot-card-${index}-${card.id}`}
                       card={card}
                       index={index}
-                      labels={{
-                        selected: text.common.selected,
-                        removeCard: text.select.removeCard,
-                      }}
+                      removeLabel={text.select.removeCard}
                       onOpenMenu={handleOpenMenu}
                       onRemove={removeSelectedCard}
                     />
@@ -402,11 +397,8 @@ export function SelectCardsPage() {
         </section>
 
         <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+          <div className="flex min-h-[5.75rem] items-start justify-between border-b border-slate-200 pb-4">
             <p className="eyebrow">{text.select.availableCards}</p>
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
-              {filteredCards.length}
-            </span>
           </div>
 
           <div className="mt-4 flex-1 xl:overflow-y-auto xl:pr-1">
@@ -418,7 +410,6 @@ export function SelectCardsPage() {
                     card={card}
                     isActive={card.id === activeCardId}
                     isSelected={selectedCardSet.has(card.id)}
-                    selectedLabel={text.common.selected}
                     onActivate={setActiveCardId}
                     onAdd={(cardId, trigger) => handleAddCard(cardId, { trigger })}
                     onOpenMenu={handleOpenMenu}
