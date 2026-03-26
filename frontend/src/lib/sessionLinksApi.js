@@ -49,6 +49,17 @@ export async function getActiveSessionStatus(sessionKey) {
 }
 
 
+export async function getActiveSessions() {
+  const response = await fetch(`${API_URL}/api/sessions`);
+  const payload = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(payload?.detail || 'Unable to load active sessions.');
+  }
+
+  return Array.isArray(payload) ? payload : [];
+}
+
+
 export async function clearAllActiveSessions() {
   const response = await fetch(`${API_URL}/api/sessions`, {
     method: 'DELETE'

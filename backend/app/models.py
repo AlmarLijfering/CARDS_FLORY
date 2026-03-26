@@ -137,6 +137,15 @@ class SessionStatusResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
+    session_url: str | None = Field(default=None, max_length=500)
+
+
+class ActiveSessionResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    session_key: str = Field(..., min_length=1, max_length=80)
+    expires_at: str = Field(..., min_length=1, max_length=64)
+    session_url: str | None = Field(default=None, max_length=500)
 
 
 class ClearSessionsResponse(BaseModel):

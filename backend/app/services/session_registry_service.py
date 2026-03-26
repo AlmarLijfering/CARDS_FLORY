@@ -33,7 +33,7 @@ def _parse_expiry(raw_value: str) -> datetime:
     return expiry
 
 
-def _load_registry() -> dict[str, str]:
+def _load_registry() -> dict[str, dict[str, str]]:
     _ensure_storage()
     path = _registry_path()
     if not path.exists():
@@ -47,51 +47,90 @@ def _load_registry() -> dict[str, str]:
     if not isinstance(payload, dict):
         return {}
 
-    normalized: dict[str, str] = {}
-    for session_key, expires_at in payload.items():
-        if isinstance(session_key, str) and isinstance(expires_at, str):
-            normalized[session_key] = expires_at
+    normalized: dict[str, dict[str, str]] = {}
+    for session_key, session_entry in payload.items():
+        if not isinstance(session_key, str):
+            continue
+        if isinstance(session_entry, str):
+            normalized[session_key] = {
+                'expires_at': session_entry,
+                'session_url': '',
+            }
+            continue
+        if isinstance(session_entry, dict):
+            expires_at = session_entry.get('expires_at')
+            session_url = session_entry.get('session_url', '')
+            if isinstance(expires_at, str) and isinstance(session_url, str):
+                normalized[session_key] = {
+                    'expires_at': expires_at,
+                    'session_url': session_url,
+                }
     return normalized
 
 
-def _persist_registry(registry: dict[str, str]) -> None:
+def _persist_registry(registry: dict[str, dict[str, str]]) -> None:
     _ensure_storage()
     _registry_path().write_text(json.dumps(registry, indent=2, sort_keys=True), encoding='utf-8')
 
 
-def _cleanup_registry(registry: dict[str, str]) -> dict[str, str]:
+def _cleanup_registry(registry: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
     now = datetime.now(UTC)
-    active_only: dict[str, str] = {}
-    for session_key, expires_at in registry.items():
+    active_only: dict[str, dict[str, str]] = {}
+    for session_key, session_entry in registry.items():
+        expires_at = session_entry.get('expires_at')
         try:
             expiry = _parse_expiry(expires_at)
-        except ValueError:
+        except (TypeError, ValueError):
             continue
         if expiry >= now:
-            active_only[session_key] = expiry.isoformat()
+            active_only[session_key] = {
+                'expires_at': expiry.isoformat(),
+                'session_url': session_entry.get('session_url', ''),
+            }
     return active_only
 
 
-def register_active_session(session_key: str, expires_at: str) -> None:
+def register_active_session(session_key: str, expires_at: str, session_url: str) -> None:
     with _REGISTRY_LOCK:
         registry = _cleanup_registry(_load_registry())
-        registry[session_key] = _parse_expiry(expires_at).isoformat()
+        registry[session_key] = {
+            'expires_at': _parse_expiry(expires_at).isoformat(),
+            'session_url': session_url,
+        }
         _persist_registry(registry)
 
 
-def get_active_session(session_key: str) -> dict[str, str]:
+def get_active_session(session_key: str) -> dict[str, str | None]:
     with _REGISTRY_LOCK:
         registry = _cleanup_registry(_load_registry())
         _persist_registry(registry)
 
-    expires_at = registry.get(session_key)
-    if not expires_at:
+    session_entry = registry.get(session_key)
+    if not session_entry:
         raise LookupError('This session is not active.')
 
     return {
         'session_key': session_key,
-        'expires_at': expires_at,
+        'expires_at': session_entry['expires_at'],
+        'session_url': session_entry.get('session_url') or None,
     }
+
+
+def list_active_sessions() -> list[dict[str, str | None]]:
+    with _REGISTRY_LOCK:
+        registry = _cleanup_registry(_load_registry())
+        _persist_registry(registry)
+
+    sessions = [
+        {
+            'session_key': session_key,
+            'expires_at': session_entry['expires_at'],
+            'session_url': session_entry.get('session_url') or None,
+        }
+        for session_key, session_entry in registry.items()
+    ]
+    sessions.sort(key=lambda session: session['expires_at'])
+    return sessions
 
 
 def clear_active_sessions() -> int:

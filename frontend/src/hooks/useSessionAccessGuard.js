@@ -15,7 +15,7 @@ export function useSessionAccessGuard() {
     async function validateSession() {
       if (activeSessionKey === 'default') {
         setIsChecking(false);
-        setErrorMessage('');
+        setErrorMessage('A valid session link is required. New session links can only be created by an admin.');
         return;
       }
 

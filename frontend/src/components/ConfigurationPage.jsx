@@ -2,17 +2,38 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useAppState } from '../lib/app-state';
-import { clearAllActiveSessions, createSessionLink } from '../lib/sessionLinksApi';
+import { clearAllActiveSessions, createSessionLink, getActiveSessions } from '../lib/sessionLinksApi';
 
 
 export function ConfigurationPage() {
   const { clearAllSessions, config, setSelectCardsBlocked } = useAppState();
   const [sessionLink, setSessionLink] = useState(null);
+  const [activeSessions, setActiveSessions] = useState([]);
+  const [hasLoadedActiveSessions, setHasLoadedActiveSessions] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
+  const [isLoadingActiveSessions, setIsLoadingActiveSessions] = useState(false);
   const [isClearingSessions, setIsClearingSessions] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [copyLabel, setCopyLabel] = useState('Copy link');
+  const [copiedSessionKey, setCopiedSessionKey] = useState('');
+
+  async function loadActiveSessions() {
+    setLinkError('');
+    setIsLoadingActiveSessions(true);
+
+    try {
+      const result = await getActiveSessions();
+      setActiveSessions(result);
+      setHasLoadedActiveSessions(true);
+      return result;
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : 'Unable to load active sessions.');
+      return [];
+    } finally {
+      setIsLoadingActiveSessions(false);
+    }
+  }
 
   async function handleCreateSessionLink() {
     setIsCreatingLink(true);
@@ -23,6 +44,7 @@ export function ConfigurationPage() {
     try {
       const result = await createSessionLink();
       setSessionLink(result);
+      await loadActiveSessions();
     } catch (error) {
       setLinkError(error instanceof Error ? error.message : 'Unable to create a session link.');
     } finally {
@@ -45,6 +67,21 @@ export function ConfigurationPage() {
     }
   }
 
+  async function handleCopyActiveSessionLink(sessionKey, sessionUrl) {
+    if (!sessionUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(sessionUrl);
+      setCopiedSessionKey(sessionKey);
+      window.setTimeout(() => setCopiedSessionKey(''), 1800);
+    } catch (error) {
+      setCopiedSessionKey(`failed:${sessionKey}`);
+      window.setTimeout(() => setCopiedSessionKey(''), 1800);
+    }
+  }
+
   async function handleClearSessions() {
     setIsClearingSessions(true);
     setLinkError('');
@@ -54,6 +91,8 @@ export function ConfigurationPage() {
       const result = await clearAllActiveSessions();
       clearAllSessions();
       setSessionLink(null);
+      setActiveSessions([]);
+      setHasLoadedActiveSessions(true);
       setStatusMessage(`${result.cleared_count} active session${result.cleared_count === 1 ? '' : 's'} cleared.`);
     } catch (error) {
       setLinkError(error instanceof Error ? error.message : 'Unable to clear active sessions.');
@@ -107,7 +146,7 @@ export function ConfigurationPage() {
                 Generate a unique client session URL that expires after 24 hours.
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
-                Set `FRONTEND_APP_URL` on the backend to the public app address, for example `https://lijfering.eu/session`.
+                Set `FRONTEND_APP_URL` on the backend to the public app address, for example `https://apps.lijfering.eu`.
               </p>
             </div>
             <button
@@ -149,6 +188,79 @@ export function ConfigurationPage() {
                 </a>
               </div>
             </div>
+          ) : null}
+        </div>
+
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 px-5 py-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Active sessions</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Open this list to review the currently active session links. Expired sessions are cleaned up automatically each time this list is loaded.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="action-chip"
+              onClick={loadActiveSessions}
+              disabled={isLoadingActiveSessions}
+            >
+              {isLoadingActiveSessions ? 'Loading...' : hasLoadedActiveSessions ? 'Refresh active sessions' : 'Show active sessions'}
+            </button>
+          </div>
+
+          {hasLoadedActiveSessions ? (
+            activeSessions.length ? (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  {activeSessions.length} active session{activeSessions.length === 1 ? '' : 's'}
+                </p>
+                {activeSessions.map((session) => (
+                  <div key={session.session_key} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900">{session.session_key}</p>
+                        <p className="mt-1">
+                          <span className="font-semibold text-slate-900">Expires:</span>{' '}
+                          {new Date(session.expires_at).toLocaleString()}
+                        </p>
+                        {session.session_url ? (
+                          <p className="mt-2 break-all">
+                            <span className="font-semibold text-slate-900">Share URL:</span> {session.session_url}
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-xs leading-5 text-slate-500">
+                            This session is active, but no share URL is stored for it.
+                          </p>
+                        )}
+                      </div>
+                      {session.session_url ? (
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            className="action-chip"
+                            onClick={() => handleCopyActiveSessionLink(session.session_key, session.session_url)}
+                          >
+                            {copiedSessionKey === session.session_key
+                              ? 'Copied'
+                              : copiedSessionKey === `failed:${session.session_key}`
+                                ? 'Copy failed'
+                                : 'Copy link'}
+                          </button>
+                          <a className="action-chip" href={session.session_url} target="_blank" rel="noreferrer">
+                            Open link
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-sm text-slate-600">
+                No active sessions right now. Create a session link above to open a new 24-hour client session.
+              </div>
+            )
           ) : null}
         </div>
       </section>

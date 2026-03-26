@@ -9,7 +9,7 @@ import { loginWithBackend } from '../lib/authApi';
 export function LandingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { config, isAuthenticated, login, logout, sessionPath } = useAppState();
+  const { config, isAuthenticated, login, logout } = useAppState();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -38,28 +38,21 @@ export function LandingPage() {
         <p className="eyebrow">Session Flow</p>
         <h2 className="page-title mt-3">Choose where you want to work.</h2>
         <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-          Open the session workspace directly for card selection, or sign in to access configuration on this device.
+          Clients can only access a session through a valid session link created by an admin. Sign in to access configuration on this device.
         </p>
         <div className="mt-8">
-          <Link
-            to={sessionPath}
-            className={`surface-muted group flex min-h-56 flex-col justify-between p-6 transition ${
-              config.selectCardsBlocked ? 'pointer-events-none opacity-60' : 'hover:-translate-y-1 hover:shadow-card'
-            }`}
-          >
+          <div className={`surface-muted flex min-h-56 flex-col justify-between p-6 ${config.selectCardsBlocked ? 'opacity-70' : ''}`}>
             <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
               <span className="text-xl font-bold">01</span>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-slate-900">Open Select Cards</h3>
+              <h3 className="text-xl font-semibold text-slate-900">Use a Session Link</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Build a live selection of up to six cards with click, keyboard, or drag-and-drop.
+                A client session opens only from a 24-hour session URL generated in Configuration by an admin.
               </p>
             </div>
-            <span className="mt-4 text-sm font-semibold text-brand-700">
-              {config.selectCardsBlocked ? 'Blocked in configuration' : 'Start a session'}
-            </span>
-          </Link>
+            <span className="mt-4 text-sm font-semibold text-brand-700">{config.selectCardsBlocked ? 'Session links are currently blocked' : 'Waiting for a session link'}</span>
+          </div>
         </div>
       </section>
       <section className="surface px-6 py-8 md:px-8 md:py-10">

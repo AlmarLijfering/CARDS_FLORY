@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from app.models import (
+    ActiveSessionResponse,
     ClearSessionsResponse,
     LoginRequest,
     LoginResponse,
@@ -18,7 +19,7 @@ from app.models import (
 )
 from app.services.pdf_service import build_pdf
 from app.services.session_link_service import create_session_link, verify_session_link
-from app.services.session_registry_service import clear_active_sessions, get_active_session
+from app.services.session_registry_service import clear_active_sessions, get_active_session, list_active_sessions
 
 
 def _allowed_origins() -> list[str]:
@@ -67,7 +68,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
     allow_credentials=False,
-    allow_methods=['POST', 'GET', 'OPTIONS'],
+    allow_methods=['POST', 'GET', 'DELETE', 'OPTIONS'],
     allow_headers=['*'],
 )
 
@@ -119,6 +120,11 @@ async def get_session_status(session_key: str):
         return get_active_session(session_key)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get('/api/sessions', response_model=list[ActiveSessionResponse])
+async def get_active_sessions():
+    return list_active_sessions()
 
 
 @app.delete('/api/sessions', response_model=ClearSessionsResponse)

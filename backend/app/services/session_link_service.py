@@ -68,8 +68,8 @@ def create_session_link(hours: int = DEFAULT_LINK_TTL_HOURS) -> dict[str, str | 
     }
     payload_bytes = json.dumps(payload, separators=(',', ':'), sort_keys=True).encode('utf-8')
     token = f'{_base64url_encode(payload_bytes)}.{_token_signature(payload_bytes)}'
-    register_active_session(session_key, expires_at.isoformat())
     session_url = _invite_url(token)
+    register_active_session(session_key, expires_at.isoformat(), session_url)
 
     return {
         'session_key': session_key,
