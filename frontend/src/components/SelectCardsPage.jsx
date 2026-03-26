@@ -28,7 +28,7 @@ function SelectedDropzone({ children, isOver, setNodeRef }) {
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-[28px] border border-slate-200 bg-white p-3 shadow-soft transition ${
+      className={`rounded-[24px] border border-slate-200 bg-white p-2.5 shadow-soft transition ${
         isOver ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-canvas' : ''
       }`}
     >
@@ -80,7 +80,9 @@ export function SelectCardsPage() {
   const { errorMessage: guardErrorMessage, isChecking, sessionDetails } = useSessionAccessGuard();
   const text = getSessionUiText(language);
 
+  const [activePane, setActivePane] = useState('right');
   const [activeCardId, setActiveCardId] = useState(() => cardCatalog[0]?.id ?? null);
+  const [activeSlotIndex, setActiveSlotIndex] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window === 'undefined' ? 1440 : window.innerWidth));
   const [activeDragCardId, setActiveDragCardId] = useState(null);
   const [previewCard, setPreviewCard] = useState(null);
@@ -163,7 +165,34 @@ export function SelectCardsPage() {
     }
   }, [activeCardId, filteredCards]);
 
+  useEffect(() => {
+    if (activeSlotIndex < 0 || activeSlotIndex >= MAX_SELECTED_CARDS) {
+      setActiveSlotIndex(0);
+    }
+  }, [activeSlotIndex]);
+
   const gridColumns = windowWidth >= 1280 ? 4 : windowWidth >= 768 ? 2 : 1;
+  const slotGridColumns = windowWidth >= 640 ? 2 : 1;
+
+  function focusCatalogCard(cardId = activeCardId || filteredCards[0]?.id) {
+    if (!cardId) {
+      return;
+    }
+    setActivePane('right');
+    setActiveCardId(cardId);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`catalog-card-${cardId}`)?.focus();
+    });
+  }
+
+  function focusSelectedSlot(slotIndex = activeSlotIndex) {
+    const normalizedIndex = Math.max(0, Math.min(slotIndex, MAX_SELECTED_CARDS - 1));
+    setActivePane('left');
+    setActiveSlotIndex(normalizedIndex);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`selected-slot-${normalizedIndex}`)?.focus();
+    });
+  }
 
   function handleAddCard(cardId, options = {}) {
     const { preferredIndex, trigger = 'programmatic' } = options;
@@ -213,6 +242,10 @@ export function SelectCardsPage() {
         event.preventDefault();
         handleAddCard(cardId, { trigger: 'keyboard' });
         return;
+      case 'Tab':
+        event.preventDefault();
+        focusSelectedSlot(activeSlotIndex);
+        return;
       default:
         return;
     }
@@ -222,10 +255,58 @@ export function SelectCardsPage() {
     if (!nextCard) {
       return;
     }
-    setActiveCardId(nextCard.id);
-    window.requestAnimationFrame(() => {
-      document.getElementById(`catalog-card-${nextCard.id}`)?.focus();
-    });
+    focusCatalogCard(nextCard.id);
+  }
+
+  function handleSelectedSlotKeyDown(event, index, hasCard, cardId) {
+    let nextIndex = index;
+
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = Math.min(MAX_SELECTED_CARDS - 1, index + 1);
+        break;
+      case 'ArrowLeft':
+        nextIndex = Math.max(0, index - 1);
+        break;
+      case 'ArrowDown':
+        nextIndex = Math.min(MAX_SELECTED_CARDS - 1, index + slotGridColumns);
+        break;
+      case 'ArrowUp':
+        nextIndex = Math.max(0, index - slotGridColumns);
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = MAX_SELECTED_CARDS - 1;
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        if (hasCard && Number.isInteger(cardId)) {
+          removeSelectedCard(cardId);
+        }
+        return;
+      case 'Tab':
+        event.preventDefault();
+        focusCatalogCard();
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    focusSelectedSlot(nextIndex);
+  }
+
+  function handleCatalogCardActivate(cardId) {
+    setActivePane('right');
+    setActiveCardId(cardId);
+  }
+
+  function handleSelectedSlotActivate(index) {
+    setActivePane('left');
+    setActiveSlotIndex(index);
   }
 
   function handleOpenMenu(event, card) {
@@ -247,6 +328,9 @@ export function SelectCardsPage() {
     setActiveDragCardId(cardId ?? null);
     setContextMenu(null);
     suppressPointerUntilRef.current = Date.now() + 450;
+    if (event.active.data.current?.source === 'catalog') {
+      setActivePane('right');
+    }
   }
 
   function handleDragCancel() {
@@ -278,8 +362,10 @@ export function SelectCardsPage() {
           return;
         }
         handleAddCard(activeData.cardId, { preferredIndex: overData.index });
+        focusSelectedSlot(overData.index);
         return;
       }
+
       handleAddCard(activeData.cardId, {});
     }
   }
@@ -336,17 +422,17 @@ export function SelectCardsPage() {
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.9fr)_minmax(0,1.1fr)]">
         <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex min-h-[5.75rem] flex-col gap-4 border-b border-slate-200 pb-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-h-[4.75rem] flex-col gap-3 border-b border-slate-200 pb-3 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="eyebrow">{text.common.session}</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">
                 {sessionDetails?.session_name || text.select.selectionTitle}
               </h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white shadow">
-                {selectedCardCount}/{MAX_SELECTED_CARDS}
-              </span>
+              <button type="button" className="action-chip" disabled={!selectedCardCount} onClick={clearSelection}>
+                {text.select.clearSelection}
+              </button>
               <button
                 type="button"
                 className="action-chip action-chip-active"
@@ -355,13 +441,10 @@ export function SelectCardsPage() {
               >
                 {text.select.finalizeSelection}
               </button>
-              <button type="button" className="action-chip" disabled={!selectedCardCount} onClick={clearSelection}>
-                {text.select.clearSelection}
-              </button>
             </div>
           </div>
 
-          <div className="mt-4 flex-1 xl:overflow-y-auto xl:pr-1">
+          <div className="mt-3 flex-1 xl:overflow-y-auto xl:pr-1">
             <SelectedDropzone isOver={selectionBoardOver} setNodeRef={setSelectionBoardRef}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {Array.from({ length: MAX_SELECTED_CARDS }, (_, index) => {
@@ -376,6 +459,9 @@ export function SelectCardsPage() {
                           slotPrefix: text.select.slotPrefix,
                           emptySlotHint: text.select.emptySlotHint,
                         }}
+                        isActive={activePane === 'left' && activeSlotIndex === index}
+                        onActivate={() => handleSelectedSlotActivate(index)}
+                        onKeyDown={handleSelectedSlotKeyDown}
                       />
                     );
                   }
@@ -386,6 +472,9 @@ export function SelectCardsPage() {
                       card={card}
                       index={index}
                       removeLabel={text.select.removeCard}
+                      isActive={activePane === 'left' && activeSlotIndex === index}
+                      onActivate={() => handleSelectedSlotActivate(index)}
+                      onKeyDown={handleSelectedSlotKeyDown}
                       onOpenMenu={handleOpenMenu}
                       onRemove={removeSelectedCard}
                     />
@@ -397,20 +486,23 @@ export function SelectCardsPage() {
         </section>
 
         <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex min-h-[5.75rem] items-start justify-between border-b border-slate-200 pb-4">
+          <div className="flex min-h-[4.75rem] items-start justify-between border-b border-slate-200 pb-3">
             <p className="eyebrow">{text.select.availableCards}</p>
+            <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white shadow">
+              {selectedCardCount}/{MAX_SELECTED_CARDS}
+            </span>
           </div>
 
-          <div className="mt-4 flex-1 xl:overflow-y-auto xl:pr-1">
+          <div className="mt-3 flex-1 xl:overflow-y-auto xl:pr-1">
             {filteredCards.length ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {filteredCards.map((card) => (
                   <CardTile
                     key={card.id}
                     card={card}
-                    isActive={card.id === activeCardId}
+                    isActive={activePane === 'right' && card.id === activeCardId}
                     isSelected={selectedCardSet.has(card.id)}
-                    onActivate={setActiveCardId}
+                    onActivate={handleCatalogCardActivate}
                     onAdd={(cardId, trigger) => handleAddCard(cardId, { trigger })}
                     onOpenMenu={handleOpenMenu}
                     onKeyDown={handleTileKeyDown}
@@ -438,7 +530,7 @@ export function SelectCardsPage() {
         card={previewCard}
         title={text.select.previewTitle}
         closeLabel={text.common.closePreview}
-        selectedLabel={previewCard && selectedCardSet.has(previewCard.id) ? text.common.selected : ''}
+        selectedLabel=""
         onClose={() => setPreviewCard(null)}
       />
 

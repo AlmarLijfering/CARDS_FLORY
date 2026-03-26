@@ -31,12 +31,12 @@ export function CardTile({
         id={`catalog-card-${card.id}`}
         ref={setNodeRef}
         type="button"
-        className={`card-button p-1.5 hover:translate-y-0 ${isActive ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-canvas' : ''}`}
+        className={`card-button p-1.5 hover:translate-y-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${isActive ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''}`}
         style={style}
         tabIndex={isActive ? 0 : -1}
         aria-disabled={isSelected}
         onFocus={() => onActivate(card.id)}
-        onClick={() => onAdd(card.id, 'pointer')}
+        onClick={() => onActivate(card.id)}
         onDoubleClick={() => onAdd(card.id, 'pointer')}
         onKeyDown={(event) => onKeyDown(event, card.id)}
         onContextMenu={(event) => onOpenMenu(event, card)}
