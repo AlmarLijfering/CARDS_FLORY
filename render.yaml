@@ -17,7 +17,11 @@ services:
         sync: false
       - key: SESSION_LINK_SECRET
         sync: false
+      - key: ADMIN_AUTH_SECRET
+        sync: false
       - key: SESSION_LINK_STORAGE_DIR
+        value: /var/data
+      - key: APP_STORAGE_DIR
         value: /var/data
       - key: User_Name
         sync: false

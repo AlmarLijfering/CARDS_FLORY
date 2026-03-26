@@ -9,6 +9,12 @@ const LandingPage = lazy(() => import('./components/LandingPage').then((module) 
 const ConfigurationPage = lazy(() =>
   import('./components/ConfigurationPage').then((module) => ({ default: module.ConfigurationPage })),
 );
+const WorkspaceSettingsPage = lazy(() =>
+  import('./components/WorkspaceSettingsPage').then((module) => ({ default: module.WorkspaceSettingsPage })),
+);
+const SessionManagementPage = lazy(() =>
+  import('./components/SessionManagementPage').then((module) => ({ default: module.SessionManagementPage })),
+);
 const ThemeLabelsPage = lazy(() =>
   import('./components/ThemeLabelsPage').then((module) => ({ default: module.ThemeLabelsPage })),
 );
@@ -57,6 +63,22 @@ export default function App() {
                 element={
                   <ProtectedConfigurationRoute>
                     <ConfigurationPage />
+                  </ProtectedConfigurationRoute>
+                }
+              />
+              <Route
+                path="/configuration/workspace"
+                element={
+                  <ProtectedConfigurationRoute>
+                    <WorkspaceSettingsPage />
+                  </ProtectedConfigurationRoute>
+                }
+              />
+              <Route
+                path="/configuration/sessions"
+                element={
+                  <ProtectedConfigurationRoute>
+                    <SessionManagementPage />
                   </ProtectedConfigurationRoute>
                 }
               />

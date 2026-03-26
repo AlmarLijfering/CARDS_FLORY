@@ -1,21 +1,17 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
+from app.services.storage_service import ensure_storage_dir
 
-ROOT_DIR = Path(__file__).resolve().parents[3]
 _REGISTRY_LOCK = Lock()
 
 
 def _storage_dir() -> Path:
-    configured = os.environ.get('SESSION_LINK_STORAGE_DIR', '').strip()
-    if configured:
-        return Path(configured)
-    return ROOT_DIR / 'backend' / 'session_data'
+    return ensure_storage_dir()
 
 
 def _registry_path() -> Path:

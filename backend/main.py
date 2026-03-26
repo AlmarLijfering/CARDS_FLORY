@@ -3,12 +3,14 @@ from __future__ import annotations
 import os
 import re
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.models import (
     ActiveSessionResponse,
+    AppConfigPayload,
     ClearSessionsResponse,
     LoginRequest,
     LoginResponse,
@@ -17,6 +19,8 @@ from app.models import (
     SessionLinkCreateResponse,
     SessionLinkVerificationResponse,
 )
+from app.services.admin_auth_service import create_admin_token, verify_admin_token
+from app.services.config_service import get_configuration, save_configuration
 from app.services.pdf_service import build_pdf
 from app.services.session_link_service import create_session_link, verify_session_link
 from app.services.session_registry_service import clear_active_sessions, get_active_session, list_active_sessions
@@ -64,6 +68,8 @@ app = FastAPI(
     summary='Stateless PDF generation for therapy card sessions',
 )
 
+admin_bearer = HTTPBearer(auto_error=False)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
@@ -88,7 +94,29 @@ async def login(payload: LoginRequest):
     if payload.username != expected_username or payload.password != expected_password:
         raise HTTPException(status_code=401, detail='Invalid username or password.')
 
-    return {'ok': True}
+    return {'ok': True, 'access_token': create_admin_token(expected_username)}
+
+
+def require_admin_session(credentials: HTTPAuthorizationCredentials | None = Depends(admin_bearer)) -> dict[str, str]:
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(status_code=401, detail='Login is required for this action.')
+
+    try:
+        return verify_admin_token(credentials.credentials)
+    except LookupError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=401, detail='Invalid admin session. Please log in again.') from error
+
+
+@app.get('/api/config', response_model=AppConfigPayload)
+async def read_configuration():
+    return get_configuration()
+
+
+@app.put('/api/config', response_model=AppConfigPayload)
+async def update_configuration(payload: AppConfigPayload, _admin_session: dict[str, str] = Depends(require_admin_session)):
+    return save_configuration(payload.model_dump())
 
 
 @app.post('/api/generate-pdf')
@@ -100,7 +128,7 @@ async def generate_pdf(payload: PdfGenerationRequest):
 
 
 @app.post('/api/session-links', response_model=SessionLinkCreateResponse)
-async def create_unique_session_link():
+async def create_unique_session_link(_admin_session: dict[str, str] = Depends(require_admin_session)):
     return create_session_link()
 
 
@@ -123,12 +151,12 @@ async def get_session_status(session_key: str):
 
 
 @app.get('/api/sessions', response_model=list[ActiveSessionResponse])
-async def get_active_sessions():
+async def get_active_sessions(_admin_session: dict[str, str] = Depends(require_admin_session)):
     return list_active_sessions()
 
 
 @app.delete('/api/sessions', response_model=ClearSessionsResponse)
-async def clear_sessions():
+async def clear_sessions(_admin_session: dict[str, str] = Depends(require_admin_session)):
     return {'cleared_count': clear_active_sessions()}
 
 

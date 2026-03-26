@@ -9,6 +9,7 @@ import {
   SUPPORTED_LANGUAGES,
   TOTAL_CARD_COUNT
 } from './constants';
+import { getConfiguration, updateConfiguration } from './configApi';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useSessionStorageState } from '../hooks/useSessionStorageState';
 
@@ -207,14 +208,24 @@ function normalizeLanguage(rawLanguage) {
 
 function normalizeAuthentication(rawAuth) {
   if (typeof rawAuth === 'boolean') {
-    return rawAuth;
+    return {
+      isAuthenticated: rawAuth,
+      token: ''
+    };
   }
 
   if (rawAuth && typeof rawAuth === 'object' && 'isAuthenticated' in rawAuth) {
-    return Boolean(rawAuth.isAuthenticated);
+    const token = typeof rawAuth.token === 'string' ? rawAuth.token : '';
+    return {
+      isAuthenticated: Boolean(rawAuth.isAuthenticated) && Boolean(token),
+      token
+    };
   }
 
-  return false;
+  return {
+    isAuthenticated: false,
+    token: ''
+  };
 }
 
 
@@ -229,11 +240,16 @@ function arrayMove(items, fromIndex, toIndex) {
 export function AppStateProvider({ children }) {
   const location = useLocation();
   const activeSessionKey = sessionKeyFromPath(location.pathname);
-  const [isAuthenticated, setIsAuthenticated] = useLocalStorageState(STORAGE_KEYS.auth, false, normalizeAuthentication);
-  const [config, setConfig] = useLocalStorageState(STORAGE_KEYS.config, DEFAULT_CONFIG, normalizeConfig);
+  const [authState, setAuthState] = useLocalStorageState(STORAGE_KEYS.auth, { isAuthenticated: false, token: '' }, normalizeAuthentication);
   const [language, setLanguage] = useLocalStorageState(STORAGE_KEYS.language, 'en', normalizeLanguage);
   const [guidanceDismissed, setGuidanceDismissed] = useLocalStorageState(STORAGE_KEYS.guidance, false, Boolean);
   const [sessions, setSessions] = useSessionStorageState(STORAGE_KEYS.sessions, {}, normalizeSessions);
+  const [config, setConfig] = useState(() => normalizeConfig(DEFAULT_CONFIG));
+  const [isConfigLoading, setIsConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState('');
+
+  const authToken = authState.token;
+  const isAuthenticated = Boolean(authState.isAuthenticated && authToken);
 
   const activeSession = sessions[activeSessionKey] || createDefaultSessionState();
 
@@ -246,12 +262,35 @@ export function AppStateProvider({ children }) {
     }
   }, [language, setLanguage]);
 
-  function updateConfig(updater) {
-    setConfig((current) => {
-      const nextConfig = typeof updater === 'function' ? updater(current) : updater;
-      return normalizeConfig(nextConfig);
-    });
-  }
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadConfiguration() {
+      setIsConfigLoading(true);
+      setConfigError('');
+
+      try {
+        const nextConfig = await getConfiguration();
+        if (!isCancelled) {
+          setConfig(normalizeConfig(nextConfig));
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setConfigError(error instanceof Error ? error.message : 'Unable to load configuration.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsConfigLoading(false);
+        }
+      }
+    }
+
+    loadConfiguration();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   function updateActiveSession(updater) {
     setSessions((current) => {
@@ -266,33 +305,66 @@ export function AppStateProvider({ children }) {
     });
   }
 
-  function setThemeLabels(themeLabels) {
-    updateConfig((current) => ({
-      ...current,
+  async function refreshConfig() {
+    setIsConfigLoading(true);
+    setConfigError('');
+
+    try {
+      const nextConfig = await getConfiguration();
+      const normalized = normalizeConfig(nextConfig);
+      setConfig(normalized);
+      return normalized;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load configuration.';
+      setConfigError(message);
+      throw error instanceof Error ? error : new Error(message);
+    } finally {
+      setIsConfigLoading(false);
+    }
+  }
+
+  async function persistConfig(nextConfig) {
+    const normalized = normalizeConfig(nextConfig);
+    const saved = await updateConfiguration(normalized, authToken);
+    const finalConfig = normalizeConfig(saved);
+    setConfig(finalConfig);
+    setConfigError('');
+    return finalConfig;
+  }
+
+  async function setThemeLabels(themeLabels) {
+    return persistConfig({
+      ...config,
       themeLabels: normalizeThemeLabels(themeLabels)
-    }));
+    });
   }
 
-  function setCardLabels(cardLabels) {
-    updateConfig((current) => ({
-      ...current,
+  async function setCardLabels(cardLabels) {
+    return persistConfig({
+      ...config,
       cardLabels: normalizeCardLabels(cardLabels)
-    }));
+    });
   }
 
-  function setSelectCardsBlocked(isBlocked) {
-    updateConfig((current) => ({
-      ...current,
+  async function setSelectCardsBlocked(isBlocked) {
+    return persistConfig({
+      ...config,
       selectCardsBlocked: Boolean(isBlocked)
-    }));
+    });
   }
 
-  function login() {
-    setIsAuthenticated(true);
+  function login(token) {
+    setAuthState({
+      isAuthenticated: Boolean(token),
+      token: token || ''
+    });
   }
 
   function logout() {
-    setIsAuthenticated(false);
+    setAuthState({
+      isAuthenticated: false,
+      token: ''
+    });
   }
 
   function addSelectedCard(cardId, preferredIndex = selectedCards.length) {
@@ -380,22 +452,25 @@ export function AppStateProvider({ children }) {
     );
   }
 
-  function importBundle(bundleText) {
+  async function importBundle(bundleText) {
     try {
       const payload = JSON.parse(bundleText);
       if (!payload || typeof payload !== 'object') {
         return { ok: false, error: 'The imported file must contain a JSON object.' };
       }
 
-      setConfig((current) => ({
-        ...current,
+      await persistConfig({
+        ...config,
         themeLabels: normalizeThemeLabels(payload.theme_labels),
         cardLabels: normalizeCardLabels(payload.card_labels)
-      }));
+      });
 
       return { ok: true };
     } catch (error) {
-      return { ok: false, error: 'The imported file is not valid JSON.' };
+      if (error instanceof SyntaxError) {
+        return { ok: false, error: 'The imported file is not valid JSON.' };
+      }
+      return { ok: false, error: error instanceof Error ? error.message : 'Unable to import configuration.' };
     }
   }
 
@@ -403,8 +478,11 @@ export function AppStateProvider({ children }) {
     activeSessionKey,
     sessionPath: buildSessionPath(activeSessionKey),
     finalizePath: buildFinalizePath(activeSessionKey),
+    authToken,
     isAuthenticated,
     config,
+    isConfigLoading,
+    configError,
     language,
     setLanguage,
     selectedCards,
@@ -414,6 +492,7 @@ export function AppStateProvider({ children }) {
     setThemeLabels,
     setCardLabels,
     setSelectCardsBlocked,
+    refreshConfig,
     login,
     logout,
     addSelectedCard,

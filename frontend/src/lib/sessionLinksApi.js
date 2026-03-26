@@ -10,12 +10,22 @@ async function parseJsonResponse(response) {
 }
 
 
-export async function createSessionLink() {
+function buildAdminHeaders(token) {
+  if (!token) {
+    throw new Error('Login is required for this action.');
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`
+  };
+}
+
+
+export async function createSessionLink(token) {
   const response = await fetch(`${API_URL}/api/session-links`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    headers: buildAdminHeaders(token)
   });
 
   const payload = await parseJsonResponse(response);
@@ -49,8 +59,10 @@ export async function getActiveSessionStatus(sessionKey) {
 }
 
 
-export async function getActiveSessions() {
-  const response = await fetch(`${API_URL}/api/sessions`);
+export async function getActiveSessions(token) {
+  const response = await fetch(`${API_URL}/api/sessions`, {
+    headers: buildAdminHeaders(token)
+  });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(payload?.detail || 'Unable to load active sessions.');
@@ -60,9 +72,10 @@ export async function getActiveSessions() {
 }
 
 
-export async function clearAllActiveSessions() {
+export async function clearAllActiveSessions(token) {
   const response = await fetch(`${API_URL}/api/sessions`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: buildAdminHeaders(token)
   });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {

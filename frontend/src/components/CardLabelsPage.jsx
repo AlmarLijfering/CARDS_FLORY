@@ -16,12 +16,13 @@ function cloneAssignments(assignments) {
 
 
 export function CardLabelsPage() {
-  const { config, exportBundle, importBundle, setCardLabels } = useAppState();
+  const { config, configError, importBundle, isConfigLoading, setCardLabels } = useAppState();
   const themeLabels = config.themeLabels.en;
   const [draftAssignments, setDraftAssignments] = useState(() => cloneAssignments(config.cardLabels));
   const [searchText, setSearchText] = useState('');
   const [labelFilter, setLabelFilter] = useState('all');
   const [assignmentFilter, setAssignmentFilter] = useState('all');
+  const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const fileInputRef = useRef(null);
 
@@ -68,22 +69,18 @@ export function CardLabelsPage() {
     });
   }
 
-  function handleSave() {
-    setCardLabels(draftAssignments);
-    setStatusMessage('Card label assignments saved locally for this browser.');
-  }
+  async function handleSave() {
+    setIsSaving(true);
+    setStatusMessage('');
 
-  function handleExport() {
-    const bundle = exportBundle();
-    const blob = new Blob([bundle], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'card_labels_bundle.json';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    try {
+      await setCardLabels(draftAssignments);
+      setStatusMessage('Card label assignments saved.');
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to save card label assignments.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handleImport(event) {
@@ -93,9 +90,9 @@ export function CardLabelsPage() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const result = typeof reader.result === 'string' ? reader.result : '';
-      const outcome = importBundle(result);
+      const outcome = await importBundle(result);
       if (outcome.ok) {
         setStatusMessage('Label bundle imported successfully.');
       } else {
@@ -112,6 +109,20 @@ export function CardLabelsPage() {
     setAssignmentFilter('all');
   }
 
+  if (isConfigLoading) {
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Loading card labels...</section>;
+  }
+
+  if (configError) {
+    return (
+      <EmptyState
+        title="Card labels unavailable"
+        description={configError}
+        tone="warning"
+      />
+    );
+  }
+
   return (
     <section className="surface px-6 py-8 md:px-8 md:py-10">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -119,7 +130,7 @@ export function CardLabelsPage() {
           <p className="eyebrow">Configuration</p>
           <h2 className="page-title mt-3">Card labels</h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-            Assign one or more of the six theme labels to each card. This screen stays in English so the admin workflow remains compact.
+            Assign one or more of the six shared theme labels to each card. This screen stays in English so the admin workflow remains compact.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -171,11 +182,8 @@ export function CardLabelsPage() {
           </select>
         </label>
         <div className="flex flex-wrap items-end gap-3">
-          <button type="button" className="action-chip" onClick={handleExport}>
-            Export bundle
-          </button>
           <button type="button" className="action-chip" onClick={() => fileInputRef.current?.click()}>
-            Import bundle
+            Import configuration
           </button>
           <input ref={fileInputRef} type="file" className="hidden" accept="application/json,.json" onChange={handleImport} />
         </div>
@@ -183,8 +191,8 @@ export function CardLabelsPage() {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500">{visibleCards.length} cards visible</p>
-        <button type="button" className="action-chip action-chip-active" onClick={handleSave}>
-          Save assignments
+        <button type="button" className="action-chip action-chip-active" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? 'Saving...' : 'Save assignments'}
         </button>
       </div>
 

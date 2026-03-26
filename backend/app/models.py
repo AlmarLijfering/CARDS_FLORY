@@ -132,6 +132,48 @@ class SessionLinkVerificationResponse(BaseModel):
     expires_at: str = Field(..., min_length=1, max_length=64)
 
 
+class ThemeLabelsPayload(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    en: list[str] = Field(default_factory=lambda: [f'Label {index + 1}' for index in range(6)], min_length=6, max_length=6)
+    nl: list[str] = Field(default_factory=lambda: [f'Label {index + 1}' for index in range(6)], min_length=6, max_length=6)
+    ro: list[str] = Field(default_factory=lambda: [f'Label {index + 1}' for index in range(6)], min_length=6, max_length=6)
+
+    @field_validator('en', 'nl', 'ro')
+    @classmethod
+    def validate_theme_label_list(cls, value: list[str]) -> list[str]:
+        return [item[:50] if isinstance(item, str) else '' for item in value]
+
+
+class AppConfigPayload(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    select_cards_blocked: bool = False
+    theme_labels: ThemeLabelsPayload = Field(default_factory=ThemeLabelsPayload)
+    card_labels: dict[str, list[int]] = Field(default_factory=dict)
+
+    @field_validator('card_labels')
+    @classmethod
+    def validate_card_labels(cls, value: dict[str, list[int]]) -> dict[str, list[int]]:
+        normalized: dict[str, list[int]] = {}
+        for raw_card_id, raw_labels in value.items():
+            card_id = str(raw_card_id).strip()
+            if not card_id:
+                continue
+
+            labels: list[int] = []
+            seen: set[int] = set()
+            for raw_label in raw_labels:
+                parsed = int(raw_label)
+                if parsed < 1 or parsed > 6 or parsed in seen:
+                    continue
+                seen.add(parsed)
+                labels.append(parsed)
+            if labels:
+                normalized[card_id] = sorted(labels)
+        return normalized
+
+
 class SessionStatusResponse(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
@@ -173,3 +215,4 @@ class LoginResponse(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     ok: bool = True
+    access_token: str = Field(..., min_length=1, max_length=500)

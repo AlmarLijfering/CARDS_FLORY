@@ -24,5 +24,12 @@ export async function loginWithBackend(username, password) {
     throw new Error(payload?.detail || 'Unable to log in.');
   }
 
-  return payload;
+  if (typeof payload?.access_token !== 'string' || !payload.access_token) {
+    throw new Error('Login succeeded, but no admin session token was returned.');
+  }
+
+  return {
+    ok: Boolean(payload?.ok),
+    accessToken: payload.access_token
+  };
 }

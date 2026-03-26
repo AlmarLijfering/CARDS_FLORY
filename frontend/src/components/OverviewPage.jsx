@@ -14,6 +14,8 @@ export function OverviewPage() {
   const {
     activeSessionKey,
     config,
+    configError,
+    isConfigLoading,
     language,
     selectedCards,
     sessionContext,
@@ -24,11 +26,25 @@ export function OverviewPage() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  if (isConfigLoading) {
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Loading session setup...</section>;
+  }
+
+  if (configError) {
+    return (
+      <EmptyState
+        title="Finalize session unavailable"
+        description={configError}
+        tone="warning"
+      />
+    );
+  }
+
   if (config.selectCardsBlocked) {
     return (
       <EmptyState
         title="Session is blocked"
-        description="This session link is currently disabled in local configuration, so finalize and print are unavailable."
+        description="This session link is currently disabled in shared configuration, so finalize and print are unavailable."
         actionLabel="Open configuration"
         onAction={() => navigate('/configuration')}
         tone="warning"

@@ -40,7 +40,9 @@ export function SelectCardsPage() {
   const {
     activeSessionKey,
     config,
+    configError,
     finalizePath,
+    isConfigLoading,
     selectedCards,
     addSelectedCard,
     removeSelectedCard,
@@ -251,11 +253,25 @@ export function SelectCardsPage() {
     }
   }
 
+  if (isConfigLoading) {
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Loading session setup...</section>;
+  }
+
+  if (configError) {
+    return (
+      <EmptyState
+        title="Session setup unavailable"
+        description={configError}
+        tone="warning"
+      />
+    );
+  }
+
   if (config.selectCardsBlocked) {
     return (
       <EmptyState
         title="Session is blocked"
-        description="This direct session link is disabled in local configuration, so the session workspace will not open until it is unblocked."
+        description="This direct session link is disabled in shared configuration, so the session workspace will not open until it is unblocked."
         actionLabel="Open configuration"
         onAction={() => navigate('/configuration')}
         tone="warning"

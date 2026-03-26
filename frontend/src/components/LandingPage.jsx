@@ -9,7 +9,7 @@ import { loginWithBackend } from '../lib/authApi';
 export function LandingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { config, isAuthenticated, login, logout } = useAppState();
+  const { config, configError, isAuthenticated, isConfigLoading, login, logout } = useAppState();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -22,8 +22,8 @@ export function LandingPage() {
     setLoginError('');
 
     try {
-      await loginWithBackend(username, password);
-      login();
+      const result = await loginWithBackend(username, password);
+      login(result.accessToken);
       navigate(redirectTarget, { replace: true });
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Unable to log in.');
@@ -51,9 +51,20 @@ export function LandingPage() {
                 A client session opens only from a 24-hour session URL generated in Configuration by an admin.
               </p>
             </div>
-            <span className="mt-4 text-sm font-semibold text-brand-700">{config.selectCardsBlocked ? 'Session links are currently blocked' : 'Waiting for a session link'}</span>
+            <span className="mt-4 text-sm font-semibold text-brand-700">
+              {isConfigLoading
+                ? 'Loading session setup'
+                : config.selectCardsBlocked
+                  ? 'Session links are currently blocked'
+                  : 'Waiting for a session link'}
+            </span>
           </div>
         </div>
+        {configError ? (
+          <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+            {configError}
+          </div>
+        ) : null}
       </section>
       <section className="surface px-6 py-8 md:px-8 md:py-10">
         <p className="eyebrow">Admin Access</p>
