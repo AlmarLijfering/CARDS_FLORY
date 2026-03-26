@@ -9,6 +9,7 @@ export function buildPdfPayload({
 }) {
   const catalogById = Object.fromEntries(cardCatalog.map((card) => [card.id, card]));
   const fallbackTitle = sessionKey && sessionKey !== 'default' ? `Session ${sessionKey}` : '';
+  const selectedCardIds = selectedCards.filter((cardId) => Number.isInteger(cardId));
 
   return {
     context: {
@@ -18,7 +19,7 @@ export function buildPdfPayload({
       notes: sessionContext.notes,
       language
     },
-    selected_cards: selectedCards.map((cardId) => {
+    selected_cards: selectedCardIds.map((cardId) => {
       const card = catalogById[cardId];
       const labels = (cardLabels[String(cardId)] || [])
         .map((labelId) => (themeLabels[language] || themeLabels.en)[labelId - 1])

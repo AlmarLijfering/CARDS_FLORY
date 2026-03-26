@@ -28,6 +28,7 @@ export function OverviewPage() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const sessionError = activeSessionKey === 'default' ? text.select.inviteRequired : guardErrorMessage;
+  const selectedCardIds = selectedCards.filter((cardId) => Number.isInteger(cardId));
 
   if (isConfigLoading) {
     return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">{text.select.loading}</section>;
@@ -71,7 +72,7 @@ export function OverviewPage() {
     );
   }
 
-  if (!selectedCards.length) {
+  if (!selectedCardIds.length) {
     return (
       <EmptyState
         title={text.overview.noCardsTitle}
@@ -82,7 +83,7 @@ export function OverviewPage() {
     );
   }
 
-  const selectedCardObjects = selectedCards
+  const selectedCardObjects = selectedCardIds
     .map((cardId) => cardCatalog.find((card) => card.id === cardId))
     .filter(Boolean);
 

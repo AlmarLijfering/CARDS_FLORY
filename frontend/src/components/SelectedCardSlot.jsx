@@ -1,6 +1,4 @@
 import { useDroppable } from '@dnd-kit/core';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 
 export function EmptySelectionSlot({ index, labels }) {
@@ -32,28 +30,26 @@ export function EmptySelectionSlot({ index, labels }) {
 export function SelectedCardSlot({
   card,
   index,
-  totalSelected,
   labels,
-  onMove,
   onOpenMenu,
   onRemove
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `selected-${card.id}`,
+  const { isOver, setNodeRef } = useDroppable({
+    id: `slot-${index}`,
     data: {
-      source: 'selected',
+      type: 'slot',
+      index,
       cardId: card.id
     }
   });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1
-  };
-
   return (
-    <article ref={setNodeRef} style={style} className="surface-muted flex min-w-0 flex-col gap-2 p-2.5">
+    <article
+      ref={setNodeRef}
+      className={`surface-muted flex min-w-0 flex-col gap-2 p-2.5 transition ${
+        isOver ? 'ring-2 ring-brand-500 ring-offset-2 ring-offset-canvas' : ''
+      }`}
+    >
       <div className="relative overflow-hidden rounded-[18px] bg-slate-100" onContextMenu={(event) => onOpenMenu(event, card)}>
         <img src={card.largeImage} alt={card.title} className="aspect-[4/5] w-full object-cover" />
         <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow">
@@ -66,47 +62,15 @@ export function SelectedCardSlot({
           {labels.selected}
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-1">
-        <button
-          type="button"
-          className="min-h-8 rounded-2xl border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"
-          onClick={() => onMove(index, index - 1)}
-          disabled={index === 0}
-          aria-label={labels.moveEarlier}
-          title={labels.moveEarlier}
-        >
-          {'<'}
-        </button>
-        <button
-          type="button"
-          className="min-h-8 rounded-2xl border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"
-          onClick={() => onMove(index, index + 1)}
-          disabled={index >= totalSelected - 1}
-          aria-label={labels.moveLater}
-          title={labels.moveLater}
-        >
-          {'>'}
-        </button>
-        <button
-          type="button"
-          className="min-h-8 rounded-2xl border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700"
-          aria-label={`${labels.dragCard} ${card.id}`}
-          title={labels.dragCard}
-          {...attributes}
-          {...listeners}
-        >
-          ||
-        </button>
-        <button
-          type="button"
-          className="min-h-8 rounded-2xl border border-rose-200 bg-rose-50 px-2 text-[11px] font-semibold text-rose-700"
-          onClick={() => onRemove(card.id)}
-          aria-label={`${labels.removeCard} ${card.id}`}
-          title={labels.removeCard}
-        >
-          X
-        </button>
-      </div>
+      <button
+        type="button"
+        className="min-h-9 rounded-2xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700"
+        onClick={() => onRemove(card.id)}
+        aria-label={`${labels.removeCard} ${card.id}`}
+        title={labels.removeCard}
+      >
+        X
+      </button>
     </article>
   );
 }

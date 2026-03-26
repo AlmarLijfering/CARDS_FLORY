@@ -20,7 +20,7 @@ const AppStateContext = createContext(null);
 
 function createDefaultSessionState() {
   return {
-    selectedCards: [],
+    selectedCards: Array(MAX_SELECTED_CARDS).fill(null),
     sessionContext: {
       sessionTitle: '',
       facilitator: '',
@@ -88,21 +88,24 @@ function normalizeSessionState(rawSession) {
   }
 
   const selectedCards = Array.isArray(rawSession.selectedCards) ? rawSession.selectedCards : [];
-  const normalizedCards = [];
+  const normalizedCards = Array(MAX_SELECTED_CARDS).fill(null);
   const seen = new Set();
-  for (const rawCardId of selectedCards) {
+  for (let index = 0; index < MAX_SELECTED_CARDS; index += 1) {
+    const rawCardId = selectedCards[index];
+    if (rawCardId == null || rawCardId === '') {
+      continue;
+    }
     const parsed = Number(rawCardId);
     if (
       !Number.isInteger(parsed)
       || parsed < 1
       || parsed > TOTAL_CARD_COUNT
       || seen.has(parsed)
-      || normalizedCards.length >= MAX_SELECTED_CARDS
     ) {
       continue;
     }
     seen.add(parsed);
-    normalizedCards.push(parsed);
+    normalizedCards[index] = parsed;
   }
 
   return {
@@ -212,6 +215,16 @@ function arrayMove(items, fromIndex, toIndex) {
   const [moved] = clone.splice(fromIndex, 1);
   clone.splice(toIndex, 0, moved);
   return clone;
+}
+
+
+function countSelectedCards(selectedCards) {
+  return selectedCards.reduce((count, cardId) => (Number.isInteger(cardId) ? count + 1 : count), 0);
+}
+
+
+function findFirstEmptySlot(selectedCards) {
+  return selectedCards.findIndex((cardId) => !Number.isInteger(cardId));
 }
 
 
@@ -374,12 +387,17 @@ export function AppStateProvider({ children }) {
 
   function addSelectedCard(cardId, preferredIndex = selectedCards.length) {
     updateActiveSession((current) => {
-      if (current.selectedCards.includes(cardId) || current.selectedCards.length >= MAX_SELECTED_CARDS) {
+      if (current.selectedCards.includes(cardId) || countSelectedCards(current.selectedCards) >= MAX_SELECTED_CARDS) {
         return current;
       }
       const nextCards = [...current.selectedCards];
-      const insertionIndex = Math.max(0, Math.min(preferredIndex, nextCards.length));
-      nextCards.splice(insertionIndex, 0, cardId);
+      const hasPreferredIndex = Number.isInteger(preferredIndex) && preferredIndex >= 0 && preferredIndex < MAX_SELECTED_CARDS;
+      const preferredSlotIsEmpty = hasPreferredIndex && !Number.isInteger(nextCards[preferredIndex]);
+      const insertionIndex = preferredSlotIsEmpty ? preferredIndex : findFirstEmptySlot(nextCards);
+      if (insertionIndex === -1) {
+        return current;
+      }
+      nextCards[insertionIndex] = cardId;
       return {
         ...current,
         selectedCards: nextCards
@@ -391,7 +409,7 @@ export function AppStateProvider({ children }) {
   function removeSelectedCard(cardId) {
     updateActiveSession((current) => ({
       ...current,
-      selectedCards: current.selectedCards.filter((value) => value !== cardId)
+      selectedCards: current.selectedCards.map((value) => (value === cardId ? null : value))
     }));
   }
 
@@ -401,14 +419,25 @@ export function AppStateProvider({ children }) {
         fromIndex === toIndex
         || fromIndex < 0
         || toIndex < 0
-        || fromIndex >= current.selectedCards.length
-        || toIndex >= current.selectedCards.length
+        || fromIndex >= MAX_SELECTED_CARDS
+        || toIndex >= MAX_SELECTED_CARDS
       ) {
         return current;
       }
+
+      const movingCard = current.selectedCards[fromIndex];
+      if (!Number.isInteger(movingCard)) {
+        return current;
+      }
+
+      const nextCards = [...current.selectedCards];
+      const targetCard = nextCards[toIndex];
+      nextCards[toIndex] = movingCard;
+      nextCards[fromIndex] = Number.isInteger(targetCard) ? targetCard : null;
+
       return {
         ...current,
-        selectedCards: arrayMove(current.selectedCards, fromIndex, toIndex)
+        selectedCards: nextCards
       };
     });
   }
