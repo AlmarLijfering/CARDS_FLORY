@@ -9,6 +9,7 @@ import {
   SUPPORTED_LANGUAGES,
   TOTAL_CARD_COUNT
 } from './constants';
+import { getAdminSessionStatus, logoutFromBackend } from './authApi';
 import { getConfiguration, updateConfiguration } from './configApi';
 import { useLocalStorageState } from '../hooks/useLocalStorageState';
 import { useSessionStorageState } from '../hooks/useSessionStorageState';
@@ -206,29 +207,6 @@ function normalizeLanguage(rawLanguage) {
 }
 
 
-function normalizeAuthentication(rawAuth) {
-  if (typeof rawAuth === 'boolean') {
-    return {
-      isAuthenticated: rawAuth,
-      token: ''
-    };
-  }
-
-  if (rawAuth && typeof rawAuth === 'object' && 'isAuthenticated' in rawAuth) {
-    const token = typeof rawAuth.token === 'string' ? rawAuth.token : '';
-    return {
-      isAuthenticated: Boolean(rawAuth.isAuthenticated) && Boolean(token),
-      token
-    };
-  }
-
-  return {
-    isAuthenticated: false,
-    token: ''
-  };
-}
-
-
 function arrayMove(items, fromIndex, toIndex) {
   const clone = [...items];
   const [moved] = clone.splice(fromIndex, 1);
@@ -240,16 +218,14 @@ function arrayMove(items, fromIndex, toIndex) {
 export function AppStateProvider({ children }) {
   const location = useLocation();
   const activeSessionKey = sessionKeyFromPath(location.pathname);
-  const [authState, setAuthState] = useLocalStorageState(STORAGE_KEYS.auth, { isAuthenticated: false, token: '' }, normalizeAuthentication);
   const [language, setLanguage] = useLocalStorageState(STORAGE_KEYS.language, 'en', normalizeLanguage);
   const [guidanceDismissed, setGuidanceDismissed] = useLocalStorageState(STORAGE_KEYS.guidance, false, Boolean);
   const [sessions, setSessions] = useSessionStorageState(STORAGE_KEYS.sessions, {}, normalizeSessions);
   const [config, setConfig] = useState(() => normalizeConfig(DEFAULT_CONFIG));
   const [isConfigLoading, setIsConfigLoading] = useState(true);
   const [configError, setConfigError] = useState('');
-
-  const authToken = authState.token;
-  const isAuthenticated = Boolean(authState.isAuthenticated && authToken);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const activeSession = sessions[activeSessionKey] || createDefaultSessionState();
 
@@ -261,6 +237,35 @@ export function AppStateProvider({ children }) {
       setLanguage('en');
     }
   }, [language, setLanguage]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadAuthSession() {
+      setIsAuthLoading(true);
+
+      try {
+        const session = await getAdminSessionStatus();
+        if (!isCancelled) {
+          setIsAuthenticated(Boolean(session.authenticated));
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setIsAuthenticated(false);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsAuthLoading(false);
+        }
+      }
+    }
+
+    loadAuthSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -325,7 +330,7 @@ export function AppStateProvider({ children }) {
 
   async function persistConfig(nextConfig) {
     const normalized = normalizeConfig(nextConfig);
-    const saved = await updateConfiguration(normalized, authToken);
+    const saved = await updateConfiguration(normalized);
     const finalConfig = normalizeConfig(saved);
     setConfig(finalConfig);
     setConfigError('');
@@ -353,18 +358,18 @@ export function AppStateProvider({ children }) {
     });
   }
 
-  function login(token) {
-    setAuthState({
-      isAuthenticated: Boolean(token),
-      token: token || ''
-    });
+  function login() {
+    setIsAuthenticated(true);
   }
 
-  function logout() {
-    setAuthState({
-      isAuthenticated: false,
-      token: ''
-    });
+  async function logout() {
+    try {
+      await logoutFromBackend();
+    } catch (error) {
+      // Even if logout fails remotely, clear the local admin state.
+    } finally {
+      setIsAuthenticated(false);
+    }
   }
 
   function addSelectedCard(cardId, preferredIndex = selectedCards.length) {
@@ -478,8 +483,8 @@ export function AppStateProvider({ children }) {
     activeSessionKey,
     sessionPath: buildSessionPath(activeSessionKey),
     finalizePath: buildFinalizePath(activeSessionKey),
-    authToken,
     isAuthenticated,
+    isAuthLoading,
     config,
     isConfigLoading,
     configError,

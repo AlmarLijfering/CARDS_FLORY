@@ -13,6 +13,7 @@ async function parseJsonResponse(response) {
 export async function loginWithBackend(username, password) {
   const response = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -24,12 +25,38 @@ export async function loginWithBackend(username, password) {
     throw new Error(payload?.detail || 'Unable to log in.');
   }
 
-  if (typeof payload?.access_token !== 'string' || !payload.access_token) {
-    throw new Error('Login succeeded, but no admin session token was returned.');
+  return {
+    ok: Boolean(payload?.ok)
+  };
+}
+
+
+export async function getAdminSessionStatus() {
+  const response = await fetch(`${API_URL}/api/auth/session`, {
+    credentials: 'include'
+  });
+  const payload = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(payload?.detail || 'Unable to check the admin session.');
   }
 
   return {
-    ok: Boolean(payload?.ok),
-    accessToken: payload.access_token
+    authenticated: Boolean(payload?.authenticated)
+  };
+}
+
+
+export async function logoutFromBackend() {
+  const response = await fetch(`${API_URL}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include'
+  });
+  const payload = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(payload?.detail || 'Unable to log out.');
+  }
+
+  return {
+    ok: Boolean(payload?.ok)
   };
 }

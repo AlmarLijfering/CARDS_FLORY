@@ -215,4 +215,9 @@ class LoginResponse(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     ok: bool = True
-    access_token: str = Field(..., min_length=1, max_length=500)
+
+
+class AuthSessionResponse(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    authenticated: bool = False

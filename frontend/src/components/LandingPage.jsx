@@ -9,7 +9,7 @@ import { loginWithBackend } from '../lib/authApi';
 export function LandingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { config, configError, isAuthenticated, isConfigLoading, login, logout } = useAppState();
+  const { config, configError, isAuthenticated, isAuthLoading, isConfigLoading, login, logout } = useAppState();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -22,8 +22,8 @@ export function LandingPage() {
     setLoginError('');
 
     try {
-      const result = await loginWithBackend(username, password);
-      login(result.accessToken);
+      await loginWithBackend(username, password);
+      login();
       navigate(redirectTarget, { replace: true });
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Unable to log in.');
@@ -69,7 +69,9 @@ export function LandingPage() {
       <section className="surface px-6 py-8 md:px-8 md:py-10">
         <p className="eyebrow">Admin Access</p>
         <h2 className="mt-3 font-display text-2xl font-semibold text-slate-900">Configuration access</h2>
-        {isAuthenticated ? (
+        {isAuthLoading ? (
+          <div className="mt-6 text-sm font-semibold text-slate-600">Checking admin session...</div>
+        ) : isAuthenticated ? (
           <div className="mt-6 space-y-4">
             <p className="text-sm leading-7 text-slate-600">
               You are signed in on this browser and can manage theme labels, card labels, and workspace blocking.
@@ -78,7 +80,13 @@ export function LandingPage() {
               <Link to="/configuration" className="action-chip action-chip-active">
                 Open configuration
               </Link>
-              <button type="button" className="action-chip" onClick={logout}>
+              <button
+                type="button"
+                className="action-chip"
+                onClick={() => {
+                  void logout();
+                }}
+              >
                 Log out
               </button>
             </div>
@@ -116,7 +124,7 @@ export function LandingPage() {
           <div className="mt-8">
             <EmptyState
               title="Session workspace is blocked"
-              description="The session route is currently disabled in local configuration on this browser."
+              description="The session route is currently disabled in shared configuration."
               actionLabel={isAuthenticated ? 'Open configuration' : undefined}
               onAction={isAuthenticated ? () => navigate('/configuration') : undefined}
               tone="warning"

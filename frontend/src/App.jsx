@@ -34,7 +34,15 @@ const SessionInvitePage = lazy(() =>
 
 function ProtectedConfigurationRoute({ children }) {
   const location = useLocation();
-  const { isAuthenticated } = useAppState();
+  const { isAuthenticated, isAuthLoading } = useAppState();
+
+  if (isAuthLoading) {
+    return (
+      <div className="surface px-6 py-8 text-sm font-semibold text-slate-600">
+        Checking admin access...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace state={{ from: location.pathname }} />;

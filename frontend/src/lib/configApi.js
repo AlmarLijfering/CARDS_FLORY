@@ -44,20 +44,10 @@ export function toApiConfig(config) {
 }
 
 
-function buildAdminHeaders(token) {
-  if (!token) {
-    throw new Error('Login is required for this action.');
-  }
-
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`
-  };
-}
-
-
 export async function getConfiguration() {
-  const response = await fetch(`${API_URL}/api/config`);
+  const response = await fetch(`${API_URL}/api/config`, {
+    credentials: 'include'
+  });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(payload?.detail || 'Unable to load configuration.');
@@ -67,10 +57,13 @@ export async function getConfiguration() {
 }
 
 
-export async function updateConfiguration(config, token) {
+export async function updateConfiguration(config) {
   const response = await fetch(`${API_URL}/api/config`, {
     method: 'PUT',
-    headers: buildAdminHeaders(token),
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify(toApiConfig(config))
   });
   const payload = await parseJsonResponse(response);

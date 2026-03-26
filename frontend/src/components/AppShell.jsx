@@ -67,8 +67,8 @@ export function AppShell({ children }) {
                 <button
                   type="button"
                   className="action-chip"
-                  onClick={() => {
-                    logout();
+                  onClick={async () => {
+                    await logout();
                     navigate('/');
                   }}
                 >

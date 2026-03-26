@@ -7,7 +7,7 @@ import { clearAllActiveSessions, createSessionLink, getActiveSessions } from '..
 
 
 export function SessionManagementPage() {
-  const { authToken, clearAllSessions } = useAppState();
+  const { clearAllSessions, isAuthenticated, isAuthLoading } = useAppState();
   const [sessionLink, setSessionLink] = useState(null);
   const [activeSessions, setActiveSessions] = useState([]);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
@@ -27,7 +27,7 @@ export function SessionManagementPage() {
     setIsLoadingActiveSessions(true);
 
     try {
-      const result = await getActiveSessions(authToken);
+      const result = await getActiveSessions();
       setActiveSessions(result);
       return result;
     } catch (error) {
@@ -45,7 +45,7 @@ export function SessionManagementPage() {
     setCopyLabel('Copy link');
 
     try {
-      const result = await createSessionLink(authToken);
+      const result = await createSessionLink();
       setSessionLink(result);
       await loadActiveSessions();
     } catch (error) {
@@ -61,7 +61,7 @@ export function SessionManagementPage() {
     setStatusMessage('');
 
     try {
-      const result = await clearAllActiveSessions(authToken);
+      const result = await clearAllActiveSessions();
       clearAllSessions();
       setSessionLink(null);
       setActiveSessions([]);
@@ -103,7 +103,11 @@ export function SessionManagementPage() {
     }
   }
 
-  if (!authToken) {
+  if (isAuthLoading) {
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Checking admin session...</section>;
+  }
+
+  if (!isAuthenticated) {
     return (
       <EmptyState
         title="Login required"

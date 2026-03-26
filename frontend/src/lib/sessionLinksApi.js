@@ -9,23 +9,10 @@ async function parseJsonResponse(response) {
   }
 }
 
-
-function buildAdminHeaders(token) {
-  if (!token) {
-    throw new Error('Login is required for this action.');
-  }
-
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`
-  };
-}
-
-
-export async function createSessionLink(token) {
+export async function createSessionLink() {
   const response = await fetch(`${API_URL}/api/session-links`, {
     method: 'POST',
-    headers: buildAdminHeaders(token)
+    credentials: 'include'
   });
 
   const payload = await parseJsonResponse(response);
@@ -38,7 +25,9 @@ export async function createSessionLink(token) {
 
 
 export async function resolveSessionInvite(token) {
-  const response = await fetch(`${API_URL}/api/session-links/${encodeURIComponent(token)}`);
+  const response = await fetch(`${API_URL}/api/session-links/${encodeURIComponent(token)}`, {
+    credentials: 'include'
+  });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(payload?.detail || 'Unable to open this session link.');
@@ -49,7 +38,9 @@ export async function resolveSessionInvite(token) {
 
 
 export async function getActiveSessionStatus(sessionKey) {
-  const response = await fetch(`${API_URL}/api/sessions/${encodeURIComponent(sessionKey)}`);
+  const response = await fetch(`${API_URL}/api/sessions/${encodeURIComponent(sessionKey)}`, {
+    credentials: 'include'
+  });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(payload?.detail || 'This session is not active.');
@@ -59,9 +50,9 @@ export async function getActiveSessionStatus(sessionKey) {
 }
 
 
-export async function getActiveSessions(token) {
+export async function getActiveSessions() {
   const response = await fetch(`${API_URL}/api/sessions`, {
-    headers: buildAdminHeaders(token)
+    credentials: 'include'
   });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
@@ -72,10 +63,10 @@ export async function getActiveSessions(token) {
 }
 
 
-export async function clearAllActiveSessions(token) {
+export async function clearAllActiveSessions() {
   const response = await fetch(`${API_URL}/api/sessions`, {
     method: 'DELETE',
-    headers: buildAdminHeaders(token)
+    credentials: 'include'
   });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
