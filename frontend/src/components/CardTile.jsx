@@ -6,6 +6,7 @@ export function CardTile({
   card,
   isActive,
   isSelected,
+  selectedLabel,
   onActivate,
   onAdd,
   onOpenMenu,
@@ -31,7 +32,11 @@ export function CardTile({
         id={`catalog-card-${card.id}`}
         ref={setNodeRef}
         type="button"
-        className={`card-button p-1.5 hover:translate-y-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${isActive ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''}`}
+        className={`card-button p-1.5 hover:translate-y-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+          isActive ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''
+        } ${
+          isSelected ? 'bg-slate-50/90 opacity-70' : ''
+        }`}
         style={style}
         tabIndex={isActive ? 0 : -1}
         aria-disabled={isSelected}
@@ -43,11 +48,19 @@ export function CardTile({
         {...attributes}
         {...listeners}
       >
-        <div className="relative overflow-hidden rounded-[16px] bg-slate-100">
-          <img src={card.smallImage} alt={card.title} className="aspect-[4/5] w-full object-cover" loading="lazy" />
+        <div className="relative overflow-hidden rounded-[18px] bg-slate-100">
+          <img src={card.smallImage} alt={card.title} className="aspect-square w-full object-cover" loading="lazy" />
           <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow">
             #{card.id}
           </div>
+          {isSelected ? (
+            <>
+              <div className="pointer-events-none absolute inset-0 bg-white/18" />
+              <div className="absolute bottom-2 left-2 rounded-full bg-brand-600 px-2 py-1 text-[11px] font-semibold text-white shadow">
+                {selectedLabel}
+              </div>
+            </>
+          ) : null}
         </div>
       </button>
     </article>

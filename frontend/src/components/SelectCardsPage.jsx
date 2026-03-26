@@ -285,6 +285,19 @@ export function SelectCardsPage() {
         event.preventDefault();
         if (hasCard && Number.isInteger(cardId)) {
           removeSelectedCard(cardId);
+          window.requestAnimationFrame(() => {
+            focusSelectedSlot(index);
+          });
+        }
+        return;
+      case 'Delete':
+      case 'Backspace':
+        event.preventDefault();
+        if (hasCard && Number.isInteger(cardId)) {
+          removeSelectedCard(cardId);
+          window.requestAnimationFrame(() => {
+            focusSelectedSlot(index);
+          });
         }
         return;
       case 'Tab':
@@ -422,7 +435,7 @@ export function SelectCardsPage() {
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.9fr)_minmax(0,1.1fr)]">
         <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex min-h-[4.75rem] flex-col gap-3 border-b border-slate-200 pb-3 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-h-[4.25rem] flex-col gap-2 border-b border-slate-200 pb-2 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="eyebrow">{text.common.session}</p>
               <h2 className="mt-1 text-2xl font-semibold text-slate-900">
@@ -444,9 +457,9 @@ export function SelectCardsPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex-1 xl:overflow-y-auto xl:pr-1">
+          <div className="mt-2 flex-1 xl:overflow-y-auto xl:pr-1">
             <SelectedDropzone isOver={selectionBoardOver} setNodeRef={setSelectionBoardRef}>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 {Array.from({ length: MAX_SELECTED_CARDS }, (_, index) => {
                   const cardId = selectedCards[index];
                   const card = Number.isInteger(cardId) ? cardCatalog.find((catalogCard) => catalogCard.id === cardId) : null;
@@ -486,22 +499,23 @@ export function SelectCardsPage() {
         </section>
 
         <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex min-h-[4.75rem] items-start justify-between border-b border-slate-200 pb-3">
+          <div className="flex min-h-[4.25rem] items-start justify-between border-b border-slate-200 pb-2">
             <p className="eyebrow">{text.select.availableCards}</p>
             <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white shadow">
               {selectedCardCount}/{MAX_SELECTED_CARDS}
             </span>
           </div>
 
-          <div className="mt-3 flex-1 xl:overflow-y-auto xl:pr-1">
+          <div className="mt-2 flex-1 xl:overflow-y-auto xl:pr-1">
             {filteredCards.length ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
                 {filteredCards.map((card) => (
                   <CardTile
                     key={card.id}
                     card={card}
                     isActive={activePane === 'right' && card.id === activeCardId}
                     isSelected={selectedCardSet.has(card.id)}
+                    selectedLabel={text.common.selected}
                     onActivate={handleCatalogCardActivate}
                     onAdd={(cardId, trigger) => handleAddCard(cardId, { trigger })}
                     onOpenMenu={handleOpenMenu}
