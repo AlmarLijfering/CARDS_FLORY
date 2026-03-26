@@ -585,11 +585,11 @@ export function SelectCardsPage() {
 
       <DragOverlay>
         {activeDragCardId ? (
-          <div className="w-28 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-card">
+          <div id="drag-overlay-card" className="aspect-square w-28 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-card">
             <img
               src={cardCatalog.find((card) => card.id === activeDragCardId)?.smallImage}
               alt={`Card ${activeDragCardId}`}
-              className="aspect-[4/5] w-full rounded-[18px] object-cover"
+              className="aspect-square h-full w-full rounded-[18px] object-cover"
             />
           </div>
         ) : null}

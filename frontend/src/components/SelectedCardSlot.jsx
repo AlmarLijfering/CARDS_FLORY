@@ -67,14 +67,14 @@ export function SelectedCardSlot({
       onFocus={onActivate}
       onClick={onActivate}
       onKeyDown={(event) => onKeyDown(event, index, true, card.id)}
-      className={`surface-muted flex min-w-0 aspect-square flex-col p-1.5 transition focus-visible:ring-0 focus-visible:ring-offset-0 ${
+      className={`flex min-w-0 aspect-square flex-col rounded-3xl border border-slate-200 bg-white p-1.5 shadow-sm transition focus-visible:ring-0 focus-visible:ring-offset-0 ${
         isOver ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''
       } ${
         isActive ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''
       }`}
     >
       <div className="relative h-full overflow-hidden rounded-[18px] bg-slate-100" onContextMenu={(event) => onOpenMenu(event, card)}>
-        <img src={card.largeImage} alt={card.title} className="aspect-square h-full w-full object-cover" />
+        <img src={card.largeImage} alt={card.title} className="aspect-square h-full w-full object-cover brightness-100 saturate-100" />
         <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow">
           #{card.id}
         </div>

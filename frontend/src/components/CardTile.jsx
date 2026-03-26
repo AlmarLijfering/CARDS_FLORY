@@ -37,7 +37,7 @@ export function CardTile({
         data-card-id={card.id}
         data-selected={isSelected ? 'true' : 'false'}
         className={`card-button relative aspect-square p-1.5 hover:translate-y-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
-          isActive ? 'z-10 border-brand-500 ring-2 ring-brand-500/45 ring-offset-0' : ''
+          isActive ? 'z-10 border-brand-500' : ''
         } ${
           isSelected ? 'bg-slate-100/90' : ''
         }`}
@@ -54,6 +54,9 @@ export function CardTile({
         {...dragListeners}
       >
         <div className="relative h-full overflow-hidden rounded-[18px] bg-slate-100">
+          {isActive ? (
+            <div className="pointer-events-none absolute inset-0 z-10 rounded-[18px] border-2 border-brand-500 shadow-[0_0_0_2px_rgba(37,99,235,0.18)]" />
+          ) : null}
           <img
             src={card.smallImage}
             alt={card.title}
