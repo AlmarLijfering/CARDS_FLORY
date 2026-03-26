@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { EmptyState } from './EmptyState';
+import { useAppState } from '../lib/app-state';
 import { resolveSessionInvite } from '../lib/sessionLinksApi';
+import { getSessionUiText } from '../lib/sessionUiText';
 
 
 export function SessionInvitePage() {
   const navigate = useNavigate();
   const { accessToken = '' } = useParams();
+  const { language } = useAppState();
+  const text = getSessionUiText(language);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -21,13 +25,13 @@ export function SessionInvitePage() {
         }
       } catch (error) {
         if (!isCancelled) {
-          setErrorMessage(error instanceof Error ? error.message : 'This session link is unavailable.');
+          setErrorMessage(error instanceof Error ? error.message : text.invite.unavailableDescription);
         }
       }
     }
 
     if (!accessToken) {
-      setErrorMessage('This session link is unavailable.');
+      setErrorMessage(text.invite.unavailableDescription);
       return () => {
         isCancelled = true;
       };
@@ -38,14 +42,14 @@ export function SessionInvitePage() {
     return () => {
       isCancelled = true;
     };
-  }, [accessToken, navigate]);
+  }, [accessToken, navigate, text.invite.unavailableDescription]);
 
   if (errorMessage) {
     return (
       <EmptyState
-        title="Session link unavailable"
+        title={text.invite.unavailableTitle}
         description={errorMessage}
-        actionLabel="Back to home"
+        actionLabel={text.common.backToHome}
         onAction={() => navigate('/')}
         tone="warning"
       />
@@ -54,7 +58,7 @@ export function SessionInvitePage() {
 
   return (
     <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">
-      Opening session link...
+      {text.invite.opening}
     </section>
   );
 }

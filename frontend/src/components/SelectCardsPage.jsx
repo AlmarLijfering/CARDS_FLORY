@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   closestCenter,
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors
@@ -16,7 +17,10 @@ import { cardCatalog } from '../data/cardCatalog';
 import { MAX_SELECTED_CARDS } from '../lib/constants';
 import { useAppState } from '../lib/app-state';
 import { useSessionAccessGuard } from '../hooks/useSessionAccessGuard';
+import { getSessionLabelName } from '../lib/sessionLabels';
+import { getSessionUiText } from '../lib/sessionUiText';
 import { CardTile } from './CardTile';
+import { CardPreviewModal } from './CardPreviewModal';
 import { EmptyState } from './EmptyState';
 import { EmptySelectionSlot, SelectedCardSlot } from './SelectedCardSlot';
 
@@ -35,6 +39,30 @@ function SelectedDropzone({ children, isOver, setNodeRef }) {
 }
 
 
+function CardContextMenu({ menu, zoomLabel, onClose, onZoom }) {
+  if (!menu) {
+    return null;
+  }
+
+  const left = typeof window === 'undefined' ? menu.x : Math.max(12, Math.min(menu.x, window.innerWidth - 196));
+  const top = typeof window === 'undefined' ? menu.y : Math.max(12, Math.min(menu.y, window.innerHeight - 84));
+
+  return (
+    <div className="fixed inset-0 z-40" onClick={onClose} onContextMenu={(event) => event.preventDefault()}>
+      <div className="surface absolute min-w-[11rem] px-2 py-2" style={{ left, top }} onClick={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          className="flex w-full items-center justify-start rounded-2xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          onClick={() => onZoom(menu.card)}
+        >
+          {zoomLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 export function SelectCardsPage() {
   const navigate = useNavigate();
   const {
@@ -43,28 +71,38 @@ export function SelectCardsPage() {
     configError,
     finalizePath,
     isConfigLoading,
+    language,
     selectedCards,
     addSelectedCard,
     removeSelectedCard,
     reorderSelectedCards,
     clearSelection,
-    getThemeLabels,
     getCardLabelIds
   } = useAppState();
-  const { errorMessage: sessionError, isChecking } = useSessionAccessGuard();
+  const { errorMessage: guardErrorMessage, isChecking, sessionDetails } = useSessionAccessGuard();
+  const text = getSessionUiText(language);
 
-  const [activeFilter, setActiveFilter] = useState('all');
   const [activeCardId, setActiveCardId] = useState(() => cardCatalog[0]?.id ?? null);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window === 'undefined' ? 1440 : window.innerWidth));
   const [activeDragCardId, setActiveDragCardId] = useState(null);
+  const [previewCard, setPreviewCard] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const suppressPointerUntilRef = useRef(0);
 
-  const themeLabels = getThemeLabels();
   const selectedCardSet = new Set(selectedCards);
+  const sessionError = activeSessionKey === 'default' ? text.select.inviteRequired : guardErrorMessage;
+  const sessionLabelName = getSessionLabelName(config, sessionDetails?.session_label_id, language);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 6
+        distance: 8
+      }
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 180,
+        tolerance: 10
       }
     }),
     useSensor(KeyboardSensor, {
@@ -88,32 +126,31 @@ export function SelectCardsPage() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const filterChips = [
-    { id: 'all', label: `All (${cardCatalog.length})` },
-    ...themeLabels
-      .map((label, index) => {
-        const labelId = index + 1;
-        const count = cardCatalog.filter((card) => getCardLabelIds(card.id).includes(labelId)).length;
-        if (!count) {
-          return null;
-        }
-        return {
-          id: String(labelId),
-          label: `${label} (${count})`
-        };
-      })
-      .filter(Boolean)
-  ];
-
   useEffect(() => {
-    if (activeFilter !== 'all' && !filterChips.some((chip) => chip.id === activeFilter)) {
-      setActiveFilter('all');
+    if (!contextMenu) {
+      return undefined;
     }
-  }, [activeFilter, filterChips]);
+
+    function handleDismiss(event) {
+      if (event.type === 'keydown' && event.key !== 'Escape') {
+        return;
+      }
+      setContextMenu(null);
+    }
+
+    window.addEventListener('scroll', handleDismiss, true);
+    window.addEventListener('resize', handleDismiss);
+    window.addEventListener('keydown', handleDismiss);
+    return () => {
+      window.removeEventListener('scroll', handleDismiss, true);
+      window.removeEventListener('resize', handleDismiss);
+      window.removeEventListener('keydown', handleDismiss);
+    };
+  }, [contextMenu]);
 
   const filteredCards = cardCatalog.filter((card) => {
     const labelIds = getCardLabelIds(card.id);
-    return activeFilter === 'all' || labelIds.includes(Number(activeFilter));
+    return sessionDetails?.session_label_id ? labelIds.includes(Number(sessionDetails.session_label_id)) : false;
   });
 
   useEffect(() => {
@@ -131,12 +168,18 @@ export function SelectCardsPage() {
     .map((cardId) => cardCatalog.find((card) => card.id === cardId))
     .filter(Boolean);
 
-  const gridColumns = windowWidth >= 1536 ? 6 : windowWidth >= 1280 ? 5 : windowWidth >= 1024 ? 4 : windowWidth >= 768 ? 3 : 2;
+  const gridColumns = windowWidth >= 1280 ? 4 : windowWidth >= 768 ? 2 : 1;
 
-  function handleAddCard(cardId, preferredIndex = selectedCards.length) {
+  function handleAddCard(cardId, options = {}) {
+    const { preferredIndex = selectedCards.length, trigger = 'programmatic' } = options;
+    if (trigger === 'pointer' && Date.now() < suppressPointerUntilRef.current) {
+      return;
+    }
+
     if (selectedCardSet.has(cardId) || selectedCards.length >= MAX_SELECTED_CARDS) {
       return;
     }
+
     addSelectedCard(cardId, preferredIndex);
   }
 
@@ -173,7 +216,7 @@ export function SelectCardsPage() {
       case 'Enter':
       case ' ':
         event.preventDefault();
-        handleAddCard(cardId);
+        handleAddCard(cardId, { trigger: 'keyboard' });
         return;
       default:
         return;
@@ -190,17 +233,35 @@ export function SelectCardsPage() {
     });
   }
 
+  function handleOpenMenu(event, card) {
+    event.preventDefault();
+    setContextMenu({
+      card,
+      x: event.clientX,
+      y: event.clientY
+    });
+  }
+
+  function handleZoomCard(card) {
+    setContextMenu(null);
+    setPreviewCard(card);
+  }
+
   function handleDragStart(event) {
     const cardId = event.active.data.current?.cardId;
     setActiveDragCardId(cardId ?? null);
+    setContextMenu(null);
+    suppressPointerUntilRef.current = Date.now() + 450;
   }
 
   function handleDragCancel() {
     setActiveDragCardId(null);
+    suppressPointerUntilRef.current = Date.now() + 250;
   }
 
   function handleDragEnd(event) {
     setActiveDragCardId(null);
+    suppressPointerUntilRef.current = Date.now() + 250;
     const { active, over } = event;
     if (!over) {
       return;
@@ -218,17 +279,17 @@ export function SelectCardsPage() {
       }
 
       if (overData?.type === 'slot') {
-        handleAddCard(activeData.cardId, overData.index);
+        handleAddCard(activeData.cardId, { preferredIndex: overData.index });
         return;
       }
 
       if (overData?.source === 'selected') {
         const overIndex = selectedCards.indexOf(overData.cardId);
-        handleAddCard(activeData.cardId, overIndex === -1 ? selectedCards.length : overIndex);
+        handleAddCard(activeData.cardId, { preferredIndex: overIndex === -1 ? selectedCards.length : overIndex });
         return;
       }
 
-      handleAddCard(activeData.cardId, selectedCards.length);
+      handleAddCard(activeData.cardId, { preferredIndex: selectedCards.length });
       return;
     }
 
@@ -254,13 +315,13 @@ export function SelectCardsPage() {
   }
 
   if (isConfigLoading) {
-    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Loading session setup...</section>;
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">{text.select.loading}</section>;
   }
 
   if (configError) {
     return (
       <EmptyState
-        title="Session setup unavailable"
+        title={text.select.unavailableTitle}
         description={configError}
         tone="warning"
       />
@@ -270,25 +331,25 @@ export function SelectCardsPage() {
   if (config.selectCardsBlocked) {
     return (
       <EmptyState
-        title="Session is blocked"
-        description="This direct session link is disabled in shared configuration, so the session workspace will not open until it is unblocked."
-        actionLabel="Open configuration"
-        onAction={() => navigate('/configuration')}
+        title={text.select.blockedTitle}
+        description={text.select.blockedDescription}
+        actionLabel={text.common.backToHome}
+        onAction={() => navigate('/')}
         tone="warning"
       />
     );
   }
 
   if (isChecking) {
-    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Opening session...</section>;
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">{text.select.opening}</section>;
   }
 
-  if (activeSessionKey !== 'default' && sessionError) {
+  if (sessionError) {
     return (
       <EmptyState
-        title="Session unavailable"
+        title={text.select.unavailableTitle}
         description={sessionError}
-        actionLabel="Back to home"
+        actionLabel={text.common.backToHome}
         onAction={() => navigate('/')}
         tone="warning"
       />
@@ -303,12 +364,22 @@ export function SelectCardsPage() {
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-6">
-        <section className="surface px-4 py-4 md:px-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.9fr)_minmax(0,1.1fr)]">
+        <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
+          <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <p className="eyebrow">Session</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-900">My Selection</h2>
+              <p className="eyebrow">{text.common.session}</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                {sessionDetails?.session_name || text.select.selectionTitle}
+              </h2>
+              <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">
+                  {text.common.label}: {sessionLabelName}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">
+                  {selectedCardObjects.length}/{MAX_SELECTED_CARDS}
+                </span>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -317,22 +388,31 @@ export function SelectCardsPage() {
                 disabled={!selectedCards.length}
                 onClick={() => navigate(finalizePath)}
               >
-                Finalize Selection
+                {text.select.finalizeSelection}
               </button>
               <button type="button" className="action-chip" disabled={!selectedCards.length} onClick={clearSelection}>
-                Clear Selection
+                {text.select.clearSelection}
               </button>
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 flex-1 xl:overflow-y-auto xl:pr-1">
             <SelectedDropzone isOver={selectionBoardOver} setNodeRef={setSelectionBoardRef}>
               <SortableContext items={selectedCardObjects.map((card) => `selected-${card.id}`)} strategy={rectSortingStrategy}>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {Array.from({ length: MAX_SELECTED_CARDS }, (_, index) => {
                     const card = selectedCardObjects[index];
                     if (!card) {
-                      return <EmptySelectionSlot key={`slot-${index}`} index={index} />;
+                      return (
+                        <EmptySelectionSlot
+                          key={`slot-${index}`}
+                          index={index}
+                          labels={{
+                            slotPrefix: text.select.slotPrefix,
+                            emptySlotHint: text.select.emptySlotHint,
+                          }}
+                        />
+                      );
                     }
 
                     return (
@@ -341,7 +421,15 @@ export function SelectCardsPage() {
                         card={card}
                         index={index}
                         totalSelected={selectedCardObjects.length}
+                        labels={{
+                          selected: text.common.selected,
+                          moveEarlier: text.select.moveEarlier,
+                          moveLater: text.select.moveLater,
+                          dragCard: text.select.dragCard,
+                          removeCard: text.select.removeCard,
+                        }}
                         onMove={(fromIndex, toIndex) => reorderSelectedCards(fromIndex, toIndex)}
+                        onOpenMenu={handleOpenMenu}
                         onRemove={removeSelectedCard}
                       />
                     );
@@ -350,50 +438,67 @@ export function SelectCardsPage() {
               </SortableContext>
             </SelectedDropzone>
           </div>
-
         </section>
 
-        <section className="surface px-4 py-4 md:px-5">
-          <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Filter cards by label">
-            {filterChips.map((chip) => {
-              const isActive = activeFilter === chip.id;
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  className={`action-chip ${isActive ? 'action-chip-active' : ''}`}
-                  aria-pressed={isActive}
-                  onClick={() => setActiveFilter(chip.id)}
-                >
-                  {chip.label}
-                </button>
-              );
-            })}
+        <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
+          <div className="border-b border-slate-200 pb-4">
+            <p className="eyebrow">{text.select.availableCards}</p>
+            <div className="mt-3">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
+                {text.common.label}: {sessionLabelName}
+              </span>
+            </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-            {filteredCards.map((card) => (
-              <CardTile
-                key={card.id}
-                card={card}
-                isActive={card.id === activeCardId}
-                isSelected={selectedCardSet.has(card.id)}
-                onActivate={setActiveCardId}
-                onAdd={handleAddCard}
-                onKeyDown={handleTileKeyDown}
+          <div className="mt-4 flex-1 xl:overflow-y-auto xl:pr-1">
+            {filteredCards.length ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {filteredCards.map((card) => (
+                  <CardTile
+                    key={card.id}
+                    card={card}
+                    isActive={card.id === activeCardId}
+                    isSelected={selectedCardSet.has(card.id)}
+                    selectedLabel={text.common.selected}
+                    onActivate={setActiveCardId}
+                    onAdd={(cardId, trigger) => handleAddCard(cardId, { trigger })}
+                    onOpenMenu={handleOpenMenu}
+                    onKeyDown={handleTileKeyDown}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={text.select.noCardsTitle}
+                description={text.select.noCardsDescription}
               />
-            ))}
+            )}
           </div>
         </section>
       </div>
 
+      <CardContextMenu
+        menu={contextMenu}
+        zoomLabel={text.common.zoomCard}
+        onClose={() => setContextMenu(null)}
+        onZoom={handleZoomCard}
+      />
+
+      <CardPreviewModal
+        card={previewCard}
+        title={text.select.previewTitle}
+        closeLabel={text.common.closePreview}
+        selectedLabel={previewCard && selectedCardSet.has(previewCard.id) ? text.common.selected : ''}
+        onClose={() => setPreviewCard(null)}
+      />
+
       <DragOverlay>
         {activeDragCardId ? (
-          <div className="w-32 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-card">
+          <div className="w-28 overflow-hidden rounded-[24px] border border-slate-200 bg-white p-2 shadow-card">
             <img
               src={cardCatalog.find((card) => card.id === activeDragCardId)?.smallImage}
               alt={`Card ${activeDragCardId}`}
-              className="aspect-square w-full rounded-[18px] object-cover"
+              className="aspect-[4/5] w-full rounded-[18px] object-cover"
             />
           </div>
         ) : null}

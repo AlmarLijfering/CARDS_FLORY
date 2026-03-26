@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 import { LANGUAGE_LABELS } from '../lib/constants';
 import { useAppState } from '../lib/app-state';
+import { getSessionUiText } from '../lib/sessionUiText';
 
 
 function navClassName(isActive) {
@@ -15,8 +16,9 @@ export function AppShell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { finalizePath, isAuthenticated, language, logout, sessionPath, setLanguage } = useAppState();
+  const text = getSessionUiText(language);
   const isConfigurationRoute = location.pathname.startsWith('/configuration');
-  const isSessionRoute = location.pathname.startsWith('/session');
+  const isSessionRoute = /^\/session\/[^/]+(?:\/finalize)?\/?$/.test(location.pathname);
   const showSessionNavigation = isSessionRoute;
   const showConfigurationNavigation = isConfigurationRoute && isAuthenticated;
 
@@ -35,22 +37,22 @@ export function AppShell({ children }) {
                   {showSessionNavigation ? (
                     <>
                       <NavLink to={sessionPath} end className={({ isActive }) => navClassName(isActive)}>
-                        Session
+                        {text.common.session}
                       </NavLink>
                       <NavLink to={finalizePath} end className={({ isActive }) => navClassName(isActive)}>
-                        Finalize Session
+                        {text.common.finalizeSession}
                       </NavLink>
                     </>
                   ) : null}
                   {showConfigurationNavigation ? (
                     <NavLink to="/configuration" end className={({ isActive }) => navClassName(isActive)}>
-                      Configuration
+                      {text.common.configuration}
                     </NavLink>
                   ) : null}
                 </nav>
               ) : null}
               <label className="flex min-h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                <span>Language</span>
+                <span>{text.common.language}</span>
                 <select
                   value={language}
                   onChange={(event) => setLanguage(event.target.value)}
@@ -72,7 +74,7 @@ export function AppShell({ children }) {
                     navigate('/');
                   }}
                 >
-                  Log out
+                  {text.common.logout}
                 </button>
               ) : null}
             </div>

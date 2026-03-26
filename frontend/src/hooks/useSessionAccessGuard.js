@@ -8,6 +8,7 @@ export function useSessionAccessGuard() {
   const { activeSessionKey } = useAppState();
   const [isChecking, setIsChecking] = useState(activeSessionKey !== 'default');
   const [errorMessage, setErrorMessage] = useState('');
+  const [sessionDetails, setSessionDetails] = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -16,6 +17,7 @@ export function useSessionAccessGuard() {
       if (activeSessionKey === 'default') {
         setIsChecking(false);
         setErrorMessage('A valid session link is required. New session links can only be created by an admin.');
+        setSessionDetails(null);
         return;
       }
 
@@ -23,13 +25,15 @@ export function useSessionAccessGuard() {
       setErrorMessage('');
 
       try {
-        await getActiveSessionStatus(activeSessionKey);
+        const result = await getActiveSessionStatus(activeSessionKey);
         if (!isCancelled) {
           setErrorMessage('');
+          setSessionDetails(result);
         }
       } catch (error) {
         if (!isCancelled) {
           setErrorMessage(error instanceof Error ? error.message : 'This session is not active.');
+          setSessionDetails(null);
         }
       } finally {
         if (!isCancelled) {
@@ -47,6 +51,7 @@ export function useSessionAccessGuard() {
 
   return {
     isChecking,
-    errorMessage
+    errorMessage,
+    sessionDetails
   };
 }

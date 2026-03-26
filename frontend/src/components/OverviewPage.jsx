@@ -5,6 +5,7 @@ import { cardCatalog } from '../data/cardCatalog';
 import { buildPdfPayload } from '../lib/insights';
 import { useAppState } from '../lib/app-state';
 import { useSessionAccessGuard } from '../hooks/useSessionAccessGuard';
+import { getSessionUiText } from '../lib/sessionUiText';
 import { downloadPdf } from '../lib/pdfApi';
 import { EmptyState } from './EmptyState';
 
@@ -22,18 +23,20 @@ export function OverviewPage() {
     sessionPath,
     updateSessionContext
   } = useAppState();
-  const { errorMessage: sessionError, isChecking } = useSessionAccessGuard();
+  const { errorMessage: guardErrorMessage, isChecking, sessionDetails } = useSessionAccessGuard();
+  const text = getSessionUiText(language);
   const [isPrinting, setIsPrinting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const sessionError = activeSessionKey === 'default' ? text.select.inviteRequired : guardErrorMessage;
 
   if (isConfigLoading) {
-    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Loading session setup...</section>;
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">{text.select.loading}</section>;
   }
 
   if (configError) {
     return (
       <EmptyState
-        title="Finalize session unavailable"
+        title={text.overview.unavailableTitle}
         description={configError}
         tone="warning"
       />
@@ -43,25 +46,25 @@ export function OverviewPage() {
   if (config.selectCardsBlocked) {
     return (
       <EmptyState
-        title="Session is blocked"
-        description="This session link is currently disabled in shared configuration, so finalize and print are unavailable."
-        actionLabel="Open configuration"
-        onAction={() => navigate('/configuration')}
+        title={text.select.blockedTitle}
+        description={text.select.blockedDescription}
+        actionLabel={text.common.backToHome}
+        onAction={() => navigate('/')}
         tone="warning"
       />
     );
   }
 
   if (isChecking) {
-    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">Opening session...</section>;
+    return <section className="surface px-6 py-8 text-sm font-semibold text-slate-600">{text.select.opening}</section>;
   }
 
-  if (activeSessionKey !== 'default' && sessionError) {
+  if (sessionError) {
     return (
       <EmptyState
-        title="Session unavailable"
+        title={text.overview.unavailableTitle}
         description={sessionError}
-        actionLabel="Back to home"
+        actionLabel={text.common.backToHome}
         onAction={() => navigate('/')}
         tone="warning"
       />
@@ -71,9 +74,9 @@ export function OverviewPage() {
   if (!selectedCards.length) {
     return (
       <EmptyState
-        title="No cards selected yet"
-        description="Choose at least one card in the session page before opening finalize session."
-        actionLabel="Open Session"
+        title={text.overview.noCardsTitle}
+        description={text.overview.noCardsDescription}
+        actionLabel={text.overview.openSession}
         onAction={() => navigate(sessionPath)}
       />
     );
@@ -98,7 +101,7 @@ export function OverviewPage() {
       });
       await downloadPdf(payload);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to generate the PDF report.');
+      setErrorMessage(error instanceof Error ? error.message : text.overview.printError);
     } finally {
       setIsPrinting(false);
     }
@@ -108,15 +111,15 @@ export function OverviewPage() {
     <section className="surface px-4 py-4 md:px-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="eyebrow">Finalize Session</p>
-          <h2 className="page-title mt-2">Selected cards</h2>
+          <p className="eyebrow">{text.common.finalizeSession}</p>
+          <h2 className="page-title mt-2">{sessionDetails?.session_name || text.overview.title}</h2>
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="button" className="action-chip" onClick={() => navigate(sessionPath)}>
-            Back to session
+            {text.overview.backToSession}
           </button>
           <button type="button" className="action-chip action-chip-active" disabled={isPrinting} onClick={handlePrint}>
-            {isPrinting ? 'Preparing PDF...' : 'Print to PDF'}
+            {isPrinting ? text.overview.preparingPdf : text.overview.printToPdf}
           </button>
         </div>
       </div>
@@ -129,13 +132,13 @@ export function OverviewPage() {
 
       <div className="mt-5 rounded-[28px] border border-slate-200 bg-slate-50 px-4 py-4">
         <label className="block text-sm text-slate-700">
-          <span className="font-semibold text-slate-900">Notes:</span>
+          <span className="font-semibold text-slate-900">{text.overview.notes}</span>
           <textarea
             value={sessionContext.notes}
             onChange={(event) => updateSessionContext({ notes: event.target.value })}
             rows={6}
             className="mt-2 w-full rounded-[24px] border border-slate-300 bg-white px-4 py-3 text-sm"
-            placeholder="Add notes here"
+            placeholder={text.overview.notesPlaceholder}
           />
         </label>
       </div>

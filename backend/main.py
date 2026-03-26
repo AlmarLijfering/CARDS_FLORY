@@ -16,6 +16,7 @@ from app.models import (
     LoginResponse,
     PdfGenerationRequest,
     SessionStatusResponse,
+    SessionLinkCreateRequest,
     SessionLinkCreateResponse,
     SessionLinkVerificationResponse,
 )
@@ -191,8 +192,8 @@ async def generate_pdf(payload: PdfGenerationRequest):
 
 
 @app.post('/api/session-links', response_model=SessionLinkCreateResponse)
-async def create_unique_session_link(_admin_session: dict[str, str] = Depends(require_admin_session)):
-    return create_session_link()
+async def create_unique_session_link(payload: SessionLinkCreateRequest, _admin_session: dict[str, str] = Depends(require_admin_session)):
+    return create_session_link(payload.session_name, payload.session_label_id)
 
 
 @app.get('/api/session-links/{token}', response_model=SessionLinkVerificationResponse)

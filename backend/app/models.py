@@ -122,7 +122,24 @@ class SessionLinkCreateResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
+    session_name: str = Field(..., min_length=1, max_length=120)
+    session_label_id: int = Field(..., ge=1, le=6)
     session_url: str = Field(..., min_length=1, max_length=500)
+
+
+class SessionLinkCreateRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    session_name: str = Field(..., min_length=1, max_length=120)
+    session_label_id: int = Field(..., ge=1, le=6)
+
+    @field_validator('session_name')
+    @classmethod
+    def validate_session_link_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError('Session details cannot be blank.')
+        return normalized
 
 
 class SessionLinkVerificationResponse(BaseModel):
@@ -130,6 +147,8 @@ class SessionLinkVerificationResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
+    session_name: str = Field(..., min_length=1, max_length=120)
+    session_label_id: int = Field(..., ge=1, le=6)
 
 
 class ThemeLabelsPayload(BaseModel):
@@ -179,6 +198,8 @@ class SessionStatusResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
+    session_name: str = Field(..., min_length=1, max_length=120)
+    session_label_id: int = Field(..., ge=1, le=6)
     session_url: str | None = Field(default=None, max_length=500)
 
 
@@ -187,6 +208,8 @@ class ActiveSessionResponse(BaseModel):
 
     session_key: str = Field(..., min_length=1, max_length=80)
     expires_at: str = Field(..., min_length=1, max_length=64)
+    session_name: str = Field(..., min_length=1, max_length=120)
+    session_label_id: int = Field(..., ge=1, le=6)
     session_url: str | None = Field(default=None, max_length=500)
 
 

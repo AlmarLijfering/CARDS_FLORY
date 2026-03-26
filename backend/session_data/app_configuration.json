@@ -1,0 +1,38 @@
+{
+  "card_labels": {
+    "1": [
+      2
+    ],
+    "2": [
+      2,
+      3
+    ]
+  },
+  "select_cards_blocked": false,
+  "theme_labels": {
+    "en": [
+      "Label 1",
+      "Label 2",
+      "Label 3",
+      "Label 4",
+      "Label 5",
+      "Label 6"
+    ],
+    "nl": [
+      "Label 1",
+      "Label 2",
+      "Label 3",
+      "Label 4",
+      "Label 5",
+      "Label 6"
+    ],
+    "ro": [
+      "Label 1",
+      "Label 2",
+      "Label 3",
+      "Label 4",
+      "Label 5",
+      "Label 6"
+    ]
+  }
+}

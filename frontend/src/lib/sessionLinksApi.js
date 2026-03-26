@@ -9,10 +9,17 @@ async function parseJsonResponse(response) {
   }
 }
 
-export async function createSessionLink() {
+export async function createSessionLink(sessionName, sessionLabelId) {
   const response = await fetch(`${API_URL}/api/session-links`, {
     method: 'POST',
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      session_name: sessionName,
+      session_label_id: Number(sessionLabelId)
+    })
   });
 
   const payload = await parseJsonResponse(response);
