@@ -37,7 +37,7 @@ export function CardTile({
         data-card-id={card.id}
         data-selected={isSelected ? 'true' : 'false'}
         className={`card-button relative aspect-square p-1.5 hover:translate-y-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${
-          isActive ? 'ring-2 ring-inset ring-brand-500 ring-offset-0' : ''
+          isActive ? 'z-10 border-brand-500 ring-2 ring-brand-500/45 ring-offset-0' : ''
         } ${
           isSelected ? 'bg-slate-100/90' : ''
         }`}

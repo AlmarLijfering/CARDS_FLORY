@@ -74,7 +74,7 @@ export function SelectedCardSlot({
       }`}
     >
       <div className="relative h-full overflow-hidden rounded-[18px] bg-slate-100" onContextMenu={(event) => onOpenMenu(event, card)}>
-        <img src={card.largeImage} alt={card.title} className="aspect-square h-full w-full object-cover opacity-80 saturate-50" />
+        <img src={card.largeImage} alt={card.title} className="aspect-square h-full w-full object-cover" />
         <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow">
           #{card.id}
         </div>
