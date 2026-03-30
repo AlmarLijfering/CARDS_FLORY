@@ -1,3 +1,9 @@
+import {
+  buildAdminAuthHeaders,
+  clearAdminAccessToken,
+  setAdminAccessToken
+} from './adminSessionStorage';
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8001').replace(/\/$/, '');
 
 
@@ -25,6 +31,8 @@ export async function loginWithBackend(username, password) {
     throw new Error(payload?.detail || 'Unable to log in.');
   }
 
+  setAdminAccessToken(payload?.access_token || '');
+
   return {
     ok: Boolean(payload?.ok)
   };
@@ -33,11 +41,16 @@ export async function loginWithBackend(username, password) {
 
 export async function getAdminSessionStatus() {
   const response = await fetch(`${API_URL}/api/auth/session`, {
-    credentials: 'include'
+    credentials: 'include',
+    headers: buildAdminAuthHeaders()
   });
   const payload = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(payload?.detail || 'Unable to check the admin session.');
+  }
+
+  if (!payload?.authenticated) {
+    clearAdminAccessToken();
   }
 
   return {
@@ -47,16 +60,21 @@ export async function getAdminSessionStatus() {
 
 
 export async function logoutFromBackend() {
-  const response = await fetch(`${API_URL}/api/auth/logout`, {
-    method: 'POST',
-    credentials: 'include'
-  });
-  const payload = await parseJsonResponse(response);
-  if (!response.ok) {
-    throw new Error(payload?.detail || 'Unable to log out.');
-  }
+  try {
+    const response = await fetch(`${API_URL}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: buildAdminAuthHeaders()
+    });
+    const payload = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(payload?.detail || 'Unable to log out.');
+    }
 
-  return {
-    ok: Boolean(payload?.ok)
-  };
+    return {
+      ok: Boolean(payload?.ok)
+    };
+  } finally {
+    clearAdminAccessToken();
+  }
 }

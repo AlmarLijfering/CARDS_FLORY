@@ -1,3 +1,5 @@
+import { buildAdminAuthHeaders } from './adminSessionStorage';
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8001').replace(/\/$/, '');
 
 
@@ -61,9 +63,9 @@ export async function updateConfiguration(config) {
   const response = await fetch(`${API_URL}/api/config`, {
     method: 'PUT',
     credentials: 'include',
-    headers: {
+    headers: buildAdminAuthHeaders({
       'Content-Type': 'application/json'
-    },
+    }),
     body: JSON.stringify(toApiConfig(config))
   });
   const payload = await parseJsonResponse(response);

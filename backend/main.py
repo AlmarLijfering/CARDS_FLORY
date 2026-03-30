@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -83,11 +84,27 @@ app.add_middleware(
 
 def _cookie_settings_for_request(request: Request) -> dict[str, object]:
     origin = request.headers.get('origin', '').strip().lower()
+    request_host = (request.url.hostname or '').strip().lower()
+    origin_host = (urlparse(origin).hostname or '').strip().lower() if origin else ''
     is_local_origin = origin.startswith('http://localhost') or origin.startswith('http://127.0.0.1')
 
     if is_local_origin:
         return {
             'secure': False,
+            'samesite': 'lax',
+        }
+
+    request_parts = request_host.split('.')
+    origin_parts = origin_host.split('.')
+    shares_site = (
+        len(request_parts) >= 2
+        and len(origin_parts) >= 2
+        and request_parts[-2:] == origin_parts[-2:]
+    )
+
+    if shares_site:
+        return {
+            'secure': True,
             'samesite': 'lax',
         }
 
@@ -121,6 +138,19 @@ def _clear_admin_session_cookie(response: Response, request: Request) -> None:
     )
 
 
+def _extract_admin_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    if cookie_token:
+        return cookie_token
+
+    authorization = request.headers.get('authorization', '').strip()
+    if authorization.lower().startswith('bearer '):
+        bearer_token = authorization[7:].strip()
+        return bearer_token or None
+
+    return None
+
+
 @app.get('/api/health')
 async def healthcheck():
     return {'status': 'ok'}
@@ -136,13 +166,14 @@ async def login(payload: LoginRequest, request: Request, response: Response):
     if payload.username != expected_username or payload.password != expected_password:
         raise HTTPException(status_code=401, detail='Invalid username or password.')
 
-    _set_admin_session_cookie(response, request, create_admin_token(expected_username))
-    return {'ok': True}
+    access_token = create_admin_token(expected_username)
+    _set_admin_session_cookie(response, request, access_token)
+    return {'ok': True, 'access_token': access_token}
 
 
 @app.get('/api/auth/session', response_model=AuthSessionResponse)
 async def get_auth_session(request: Request):
-    token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    token = _extract_admin_token(request)
     if not token:
         return {'authenticated': False}
 
@@ -161,7 +192,7 @@ async def logout(request: Request, response: Response):
 
 
 def require_admin_session(request: Request) -> dict[str, str]:
-    token = request.cookies.get(ADMIN_SESSION_COOKIE)
+    token = _extract_admin_token(request)
     if not token:
         raise HTTPException(status_code=401, detail='Login is required for this action.')
 
