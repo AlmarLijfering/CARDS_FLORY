@@ -26,7 +26,7 @@ def run_keyboard_regression(session_url: str) -> None:
 
             page.keyboard.press("ArrowUp")
             page.wait_for_function(
-                "() => document.activeElement && document.activeElement.id === 'catalog-card-5'"
+                "() => document.activeElement && document.activeElement.id === 'catalog-card-7'"
             )
 
             page.keyboard.press("ArrowDown")

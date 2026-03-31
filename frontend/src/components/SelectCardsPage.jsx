@@ -166,8 +166,8 @@ export function SelectCardsPage() {
     }
   }, [activeSlotIndex]);
 
-  const gridColumns = windowWidth >= 1280 ? 4 : windowWidth >= 768 ? 2 : 1;
-  const slotGridColumns = windowWidth >= 640 ? 2 : 1;
+  const gridColumns = windowWidth >= 1536 ? 4 : windowWidth >= 640 ? 3 : 2;
+  const slotGridColumns = 2;
 
   function getPreferredCatalogCardId() {
     return filteredCards.find((card) => !selectedCardSet.has(card.id))?.id ?? filteredCards[0]?.id ?? null;
@@ -468,8 +468,42 @@ export function SelectCardsPage() {
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid gap-5 xl:grid-cols-[minmax(20rem,0.9fr)_minmax(0,1.1fr)]">
-        <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
+      <div className="grid gap-5 md:grid-cols-[minmax(0,1.12fr)_minmax(19rem,0.88fr)]">
+        <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:h-[calc(100vh-10.5rem)] md:overflow-hidden md:px-5">
+          <div className="flex min-h-[4.25rem] items-start justify-between border-b border-slate-200 pb-2">
+            <p className="eyebrow">{text.select.availableCards}</p>
+            <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white shadow">
+              {selectedCardCount}/{MAX_SELECTED_CARDS}
+            </span>
+          </div>
+
+          <div className="mt-2 flex-1 md:overflow-y-auto md:pr-1">
+            {filteredCards.length ? (
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 2xl:grid-cols-4">
+                {filteredCards.map((card) => (
+                  <CardTile
+                    key={card.id}
+                    card={card}
+                    isActive={activePane === 'right' && card.id === activeCardId}
+                    isSelected={selectedCardSet.has(card.id)}
+                    selectedLabel={text.common.selected}
+                    onActivate={handleCatalogCardActivate}
+                    onAdd={(cardId, trigger) => handleAddCard(cardId, { trigger })}
+                    onOpenMenu={handleOpenMenu}
+                    onKeyDown={handleTileKeyDown}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title={text.select.noCardsTitle}
+                description={text.select.noCardsDescription}
+              />
+            )}
+          </div>
+        </section>
+
+        <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:h-[calc(100vh-10.5rem)] md:overflow-hidden md:px-5">
           <div className="flex min-h-[4.25rem] flex-col gap-2 border-b border-slate-200 pb-2 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="eyebrow">{text.common.session}</p>
@@ -492,9 +526,9 @@ export function SelectCardsPage() {
             </div>
           </div>
 
-          <div className="mt-2 flex-1 xl:overflow-y-auto xl:pr-1">
+          <div className="mt-2 flex-1 md:overflow-y-auto md:pr-1">
             <SelectedDropzone isOver={selectionBoardOver} setNodeRef={setSelectionBoardRef}>
-              <div className="grid gap-2.5 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {Array.from({ length: MAX_SELECTED_CARDS }, (_, index) => {
                   const cardId = selectedCards[index];
                   const card = Number.isInteger(cardId) ? cardCatalog.find((catalogCard) => catalogCard.id === cardId) : null;
@@ -530,40 +564,6 @@ export function SelectCardsPage() {
                 })}
               </div>
             </SelectedDropzone>
-          </div>
-        </section>
-
-        <section className="surface flex min-h-[34rem] flex-col px-4 py-4 md:px-5 xl:h-[calc(100vh-10.5rem)] xl:overflow-hidden">
-          <div className="flex min-h-[4.25rem] items-start justify-between border-b border-slate-200 pb-2">
-            <p className="eyebrow">{text.select.availableCards}</p>
-            <span className="rounded-full bg-brand-600 px-3 py-1 text-sm font-semibold text-white shadow">
-              {selectedCardCount}/{MAX_SELECTED_CARDS}
-            </span>
-          </div>
-
-          <div className="mt-2 flex-1 xl:overflow-y-auto xl:pr-1">
-            {filteredCards.length ? (
-              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-                {filteredCards.map((card) => (
-                  <CardTile
-                    key={card.id}
-                    card={card}
-                    isActive={activePane === 'right' && card.id === activeCardId}
-                    isSelected={selectedCardSet.has(card.id)}
-                    selectedLabel={text.common.selected}
-                    onActivate={handleCatalogCardActivate}
-                    onAdd={(cardId, trigger) => handleAddCard(cardId, { trigger })}
-                    onOpenMenu={handleOpenMenu}
-                    onKeyDown={handleTileKeyDown}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                title={text.select.noCardsTitle}
-                description={text.select.noCardsDescription}
-              />
-            )}
           </div>
         </section>
       </div>
