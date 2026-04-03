@@ -16,5 +16,17 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port: 4173,
     },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: './src/test/setup.js',
+      deps: {
+        optimizer: {
+          web: {
+            include: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          },
+        },
+      },
+    },
   };
 });
