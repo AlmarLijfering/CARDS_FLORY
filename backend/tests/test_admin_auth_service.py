@@ -9,11 +9,11 @@ from app.services.admin_auth_service import create_admin_token, verify_admin_tok
 
 
 class TestCreateAdminToken:
-    def test_returns_dot_separated_token(self):
+    def test_returns_jwt_format_token(self):
         token = create_admin_token('admin')
         assert '.' in token
         parts = token.split('.')
-        assert len(parts) == 2
+        assert len(parts) == 3
         assert all(parts)
 
     def test_different_users_produce_different_tokens(self):
@@ -38,8 +38,8 @@ class TestVerifyAdminToken:
 
     def test_tampered_payload_rejected(self):
         token = create_admin_token('admin')
-        _payload, sig = token.split('.', 1)
-        tampered = f'AAAA.{sig}'
+        header, _payload, sig = token.split('.')
+        tampered = f'{header}.AAAA.{sig}'
         with pytest.raises(ValueError, match='Invalid admin token'):
             verify_admin_token(tampered)
 
